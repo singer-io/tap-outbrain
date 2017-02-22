@@ -16,7 +16,7 @@ import backoff
 import requests
 import stitchstream
 
-import schemas
+import tap_outbrain.schemas as schemas
 
 logger = stitchstream.get_logger()
 
