@@ -67,13 +67,10 @@ def generate_token(username, password):
                                      'utf-8')) \
                     .decode('utf-8')
 
-    try:
-        response = requests.get(
-            '{}/login'.format(BASE_URL),
-            headers={'Authorization': 'Basic {}'.format(encoded)})
-    except e:
-        logger.exception(e)
-        raise e
+    response = requests.get(
+        '{}/login'.format(BASE_URL),
+        headers={'Authorization': 'Basic {}'.format(encoded)})
+    response.raise_for_status()
 
     logger.info("Got response code: {}".format(response.status_code))
 
