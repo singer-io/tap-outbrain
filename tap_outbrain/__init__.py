@@ -6,20 +6,20 @@ import argparse
 import base64
 import copy
 import datetime
-import dateutil.parser
 import json
 import os
 import sys
 import time
 
 import backoff
+import dateutil.parser
 import requests
 import singer
 
 import tap_outbrain.schemas as schemas
 
-logger = singer.get_logger()
-session = requests.Session()
+LOGGER = singer.get_logger()
+SESSION = requests.Session()
 
 BASE_URL = 'https://api.outbrain.com/amplify/v0.1'
 CONFIG = {}
@@ -33,7 +33,7 @@ DEFAULT_START_DATE = '2016-08-01'
 
 
 def giveup(error):
-    logger.error(error.response.text)
+    LOGGER.error(error.response.text)
     response = error.response
     return not (response.status_code == 429 or
                 response.status_code >= 500)
@@ -45,40 +45,38 @@ def giveup(error):
                       max_tries=5,
                       giveup=giveup,
                       interval=30)
-def request(url, access_token, params={}):
-    logger.info("Making request: GET {} {}".format(url, params))
+def request(url, access_token, params=None):
+    params = params or {}
+    LOGGER.info("Making request: GET {} {}".format(url, params))
     headers = {'OB-TOKEN-V1': access_token}
     if 'user_agent' in CONFIG:
         headers['User-Agent'] = CONFIG['user_agent']
 
     req = requests.Request('GET', url, headers=headers, params=params).prepare()
-    logger.info("GET {}".format(req.url))
-    resp = session.send(req)
+    LOGGER.info("GET {}".format(req.url))
+    resp = SESSION.send(req)
 
     if resp.status_code >= 400:
-        logger.error("GET {} [{} - {}]".format(req.url, resp.status_code, resp.content))
+        LOGGER.error("GET {} [{} - {}]".format(req.url, resp.status_code, resp.content))
         resp.raise_for_status()
 
     return resp
 
 
 def generate_token(username, password):
-    logger.info("Generating new token using basic auth.")
+    LOGGER.info("Generating new token using basic auth.")
 
     auth = requests.auth.HTTPBasicAuth(username, password)
     response = requests.get('{}/login'.format(BASE_URL), auth=auth)
-    logger.info("Got response code: {}".format(response.status_code))
+    LOGGER.info("Got response code: {}".format(response.status_code))
     response.raise_for_status()
 
     return response.json().get('OB-TOKEN-V1')
 
 
-def parse_datetime(datetime):
-    dt = dateutil.parser.parse(datetime)
-
-    # TODO the assumption is that the timestamp comes in in UTC, but that
-    #      may not be true. verify w/ outbrain.
-    return dt.isoformat('T') + 'Z'
+def parse_datetime(dtime):
+    dtime = dateutil.parser.parse(dtime)
+    return dtime.isoformat('T') + 'Z'
 
 
 def parse_performance(result, extra_fields):
@@ -175,7 +173,7 @@ def sync_performance(state, access_token, account_id, table_name, state_sub_id,
     # sync 2 days before last saved date, or DEFAULT_START_DATE
     from_date = datetime.datetime.strptime(
         state.get(table_name, {})
-             .get(state_sub_id, DEFAULT_START_DATE),
+        .get(state_sub_id, DEFAULT_START_DATE),
         '%Y-%m-%d').date() - datetime.timedelta(days=2)
 
     to_date = datetime.date.today()
@@ -187,7 +185,7 @@ def sync_performance(state, access_token, account_id, table_name, state_sub_id,
     last_request_start = None
 
     for date_range in date_ranges:
-        logger.info(
+        LOGGER.info(
             'Pulling {} for {} from {} to {}'
             .format(table_name,
                     extra_persist_fields,
@@ -211,7 +209,7 @@ def sync_performance(state, access_token, account_id, table_name, state_sub_id,
             params)
         last_request_end = time.time()
 
-        logger.info('Done in {} sec'.format(time.time() - last_request_start))
+        LOGGER.info('Done in {} sec'.format(time.time() - last_request_start))
 
         performance = [
             parse_performance(result, extra_persist_fields)
@@ -230,7 +228,7 @@ def sync_performance(state, access_token, account_id, table_name, state_sub_id,
         if last_request_start is not None and \
            (time.time() - last_request_end) < 30:
             to_sleep = 30 - (time.time() - last_request_end)
-            logger.info(
+            LOGGER.info(
                 'Limiting to 2 requests per minute. Sleeping {} sec '
                 'before making the next reporting request.'
                 .format(to_sleep))
@@ -248,7 +246,7 @@ def parse_campaign(campaign):
 
 
 def sync_campaigns(state, access_token, account_id):
-    logger.info('Syncing campaigns.')
+    LOGGER.info('Syncing campaigns.')
 
     start = time.time()
     response = request(
@@ -260,7 +258,7 @@ def sync_campaigns(state, access_token, account_id):
 
     singer.write_records('campaigns', campaigns)
 
-    logger.info('Done in {} sec.'.format(time.time() - start))
+    LOGGER.info('Done in {} sec.'.format(time.time() - start))
 
     campaigns_done = 0
 
@@ -278,11 +276,11 @@ def sync_campaigns(state, access_token, account_id):
 
         campaigns_done = campaigns_done + 1
 
-        logger.info(
+        LOGGER.info(
             '{} of {} campaigns fully synced.'
             .format(campaigns_done, len(campaigns)))
 
-    logger.info('Done!')
+    LOGGER.info('Done!')
 
 
 def parse_link(link):
@@ -299,7 +297,7 @@ def sync_links(state, access_token, account_id, campaign_id):
     limit = 100
 
     while processed_count != total_count:
-        logger.info(
+        LOGGER.info(
             'Syncing {} links for campaign {} starting from offset {}'
             .format(limit,
                     campaign_id,
@@ -322,7 +320,7 @@ def sync_links(state, access_token, account_id, campaign_id):
         processed_count = processed_count + len(links)
 
         for link in links:
-            logger.info(
+            LOGGER.info(
                 'Syncing link performance for link {} of {}.'.format(
                     fully_synced_count,
                     total_count))
@@ -332,21 +330,19 @@ def sync_links(state, access_token, account_id, campaign_id):
 
             fully_synced_count = fully_synced_count + 1
 
-        logger.info('Done in {} sec, processed {} of {} links.'
+        LOGGER.info('Done in {} sec, processed {} of {} links.'
                     .format(time.time() - start,
                             processed_count,
                             total_count))
 
-    logger.info('Done syncing links for campaign {}.'.format(campaign_id))
+    LOGGER.info('Done syncing links for campaign {}.'.format(campaign_id))
 
 
 def do_sync(args):
-    global DEFAULT_START_DATE, CONFIG
     state = DEFAULT_STATE
 
     with open(args.config) as config_file:
         config = json.load(config_file)
-        CONFIG.update(config)
 
     missing_keys = []
     if 'username' not in config:
@@ -368,33 +364,34 @@ def do_sync(args):
         missing_keys.append('start_date')
     else:
         # only want the date
-        DEFAULT_START_DATE = config['start_date'][:10]
+        config['start_date'] = config['start_date'][:10]
 
     if len(missing_keys) > 0:
-        logger.fatal("Missing {}.".format(", ".join(missing_keys)))
+        LOGGER.fatal("Missing {}.".format(", ".join(missing_keys)))
         raise RuntimeError
 
+    CONFIG.update(config)
     access_token = config.get('access_token')
 
     if access_token is None:
         access_token = generate_token(username, password)
 
     if access_token is None:
-        logger.fatal("Failed to generate a new access token.")
+        LOGGER.fatal("Failed to generate a new access token.")
         raise RuntimeError
 
 
     singer.write_schema('campaigns',
-                        schemas.campaign,
+                        schemas.CAMPAIGN,
                         key_properties=["id"])
     singer.write_schema('campaign_performance',
-                        schemas.campaign_performance,
+                        schemas.CAMPAIGN_PERFORMANCE,
                         key_properties=["campaignId", "fromDate"])
     singer.write_schema('links',
-                        schemas.link,
+                        schemas.LINK,
                         key_properties=["id"])
     singer.write_schema('link_performance',
-                        schemas.link_performance,
+                        schemas.LINK_PERFORMANCE,
                         key_properties=["campaignId", "linkId", "fromDate"])
 
     sync_campaigns(state, access_token, account_id)

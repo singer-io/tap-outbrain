@@ -1,4 +1,4 @@
-link = {
+LINK = {
     'type': 'object',
     'properties': {
         'id': {
@@ -82,7 +82,7 @@ link = {
 }
 
 
-campaign = {
+CAMPAIGN = {
     'type': 'object',
     'properties': {
         'id': {
@@ -99,7 +99,7 @@ campaign = {
                             'in Live Status')
         },
         'onAirReason': {
-	    'type': 'string',
+            'type': 'string',
             'description': ('The reason for the campaign on air status, same '
                             'as onAirReason in Live Status')
         },
@@ -113,7 +113,7 @@ campaign = {
                             'details use Budget'),
             'properties': {
                 'id': {
-	            'type': 'string',
+                    'type': 'string',
                     'description': ('The id of this Budget, i.e. '
                                     '"00f4b02153ee75f3c9dc4fc128ab041962"')
                 },
@@ -214,7 +214,7 @@ campaign = {
 }
 
 
-campaign_performance = {
+CAMPAIGN_PERFORMANCE = {
     'type': 'object',
     'properties': {
         'campaignId': {
@@ -274,7 +274,7 @@ campaign_performance = {
     }
 }
 
-link_performance = {
+LINK_PERFORMANCE = {
     'type': 'object',
     'properties': {
         'campaignId': {
