@@ -1,7 +1,9 @@
 machine:
   python:
     version: 3.4.4
-  dependencies:
+
+dependencies:
+  pre:
     - pip install pylint
 
 test:
