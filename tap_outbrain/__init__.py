@@ -15,7 +15,7 @@ import time
 import backoff
 import requests
 import singer
-from singer.requests import giveup_on_http_4xx_except_429
+import singer.requests
 
 import tap_outbrain.schemas as schemas
 
@@ -44,7 +44,7 @@ def giveup(error):
                       (requests.exceptions.RequestException),
                       jitter=backoff.random_jitter,
                       max_tries=5,
-                      giveup=giveup_on_http_4xx_except_429,
+                      giveup=singer.requests.giveup_on_http_4xx_except_429,
                       interval=30)
 def request(url, access_token, params={}):
     logger.info("Making request: GET {} {}".format(url, params))
