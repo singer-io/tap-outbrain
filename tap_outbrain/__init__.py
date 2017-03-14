@@ -33,13 +33,6 @@ DEFAULT_STATE = {
 DEFAULT_START_DATE = '2016-08-01'
 
 
-def giveup(error):
-    LOGGER.error(error.response.text)
-    response = error.response
-    return not (response.status_code == 429 or
-                response.status_code >= 500)
-
-
 @backoff.on_exception(backoff.constant,
                       (requests.exceptions.RequestException),
                       jitter=backoff.random_jitter,
