@@ -6,7 +6,7 @@ machine:
 
 test:
   post:
-    pylint tap_outbrain
+    - pylint tap_outbrain
     
 
 
