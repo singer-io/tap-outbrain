@@ -27,13 +27,17 @@ BASE_URL = 'https://api.outbrain.com/amplify/v0.1'
 CONFIG = {}
 
 DEFAULT_STATE = {
-    'campaign_performance': {},
-    'link_performance': {}
+    'campaign_performance': {}
 }
 
 DEFAULT_START_DATE = '2016-08-01'
 
+# We can retrieve at most 2 campaigns per minute. We only have 5.5 hours
+# to run so that works out to about 660 (120 campaigns per hour * 5.5 =
+# 660) campaigns.
+TAP_CAMPAIGN_COUNT_ERROR_CEILING = 660
 MARKETERS_CAMPAIGNS_MAX_LIMIT = 50
+REPORTS_MARKETERS_PERIODIC_MAX_LIMIT = 100
 
 
 @backoff.on_exception(backoff.constant,
@@ -138,22 +142,19 @@ def sync_performance(state, access_token, account_id, table_name, state_sub_id,
     - `state`: state map
     - `access_token`: access token for Outbrain Amplify API
     - `account_id`: Outbrain marketer ID
-    - `table_name`: the table name to use. At present, one of
-                    `campaign_performance` or `link_performance`.
+    - `table_name`: the table name to use. At present:
+      `campaign_performance`
     - `state_sub_id`: the id to use within the state map to identify this
                       sub-object. For example,
 
-                        state['link_performance'][link_id]
+                        state['campaign_performance'][state_sub_id]
 
-                      is used for the `link_performance` table.
+                      is used for the `campaign_performance` table.
     - `extra_params`: extra params sent to the Outbrain API
     - `extra_persist_fields`: extra fields pushed into the destination data.
                               For example:
 
-                                {'campaignId': '000b...',
-                                 'promotedLinkId': '000a...'}
-
-                              is used for `link_performance`.
+                                {'campaignId': '000b...'}
     """
     # sync 2 days before last saved date, or DEFAULT_START_DATE
     from_date = datetime.datetime.strptime(
@@ -163,7 +164,7 @@ def sync_performance(state, access_token, account_id, table_name, state_sub_id,
 
     to_date = datetime.date.today()
 
-    interval_in_days = 100
+    interval_in_days = REPORTS_MARKETERS_PERIODIC_MAX_LIMIT
 
     date_ranges = get_date_ranges(from_date, to_date, interval_in_days)
 
@@ -181,7 +182,7 @@ def sync_performance(state, access_token, account_id, table_name, state_sub_id,
             'from': date_range.get('from_date'),
             'to': date_range.get('to_date'),
             'breakdown': 'daily',
-            'limit': 100,
+            'limit': REPORTS_MARKETERS_PERIODIC_MAX_LIMIT,
             'sort': '+fromDate',
             'includeArchivedCampaigns': True,
         }
@@ -191,7 +192,13 @@ def sync_performance(state, access_token, account_id, table_name, state_sub_id,
         response = request(
             '{}/reports/marketers/{}/periodic'.format(BASE_URL, account_id),
             access_token,
-            params)
+            params).json()
+        if REPORTS_MARKETERS_PERIODIC_MAX_LIMIT < response.get('totalResults'):
+            LOGGER.warn('More performance data (`{}`) than the tap can currently retrieve (`{}`)'.format(
+                response.get('totalResults'), REPORTS_MARKETERS_PERIODIC_MAX_LIMIT))
+        else:
+            LOGGER.info('Syncing `{}` rows of performance data for campaign `{}`. Requested `{}`.'.format(
+                response.get('totalResults'), state_sub_id, REPORTS_MARKETERS_PERIODIC_MAX_LIMIT))
         last_request_end = utils.now()
 
         LOGGER.info('Done in {} sec'.format(
@@ -199,7 +206,7 @@ def sync_performance(state, access_token, account_id, table_name, state_sub_id,
 
         performance = [
             parse_performance(result, extra_persist_fields)
-            for result in response.json().get('results')]
+            for result in response.get('results')]
 
         for record in performance:
             singer.write_record(table_name, record, time_extracted=last_request_end)
@@ -232,52 +239,58 @@ def parse_campaign(campaign):
     return campaign
 
 
-def sync_campaigns(state, access_token, account_id):
-    LOGGER.info('Syncing campaigns.')
-
-    start = utils.now()
-    response = request(
+def get_campaigns_page(account_id, access_token, offset):
+    return request(
         '{}/marketers/{}/campaigns'.format(BASE_URL, account_id),
-        access_token, {'limit': MARKETERS_CAMPAIGNS_MAX_LIMIT}).json()
+        access_token, {'limit': MARKETERS_CAMPAIGNS_MAX_LIMIT,
+                       'offset': offset}).json()
 
-    if response.get('totalCount') > MARKETERS_CAMPAIGNS_MAX_LIMIT:
-        LOGGER.warn('Total Campaign Count ({}) exceeds the number of campaigns we can currently retrieve ({})'.format(
-            response.get('totalCount'),
-            MARKETERS_CAMPAIGNS_MAX_LIMIT))
-    else:
-        LOGGER.info('Total Campaign Count ({}) can be safely retrieved'.format(
-            response.get('totalCount')))
 
-    time_extracted = utils.now()
+def get_campaign_pages(account_id, access_token):
+    more_campaigns = True
+    offset = 0
 
+    while more_campaigns:
+        LOGGER.info('Retrieving campaigns from offset `{}`'.format(
+            offset))
+        campaign_page = get_campaigns_page(account_id, access_token,
+                                           offset)
+        if TAP_CAMPAIGN_COUNT_ERROR_CEILING < campaign_page.get('totalCount'):
+            msg = 'Tap found `{}` campaigns which is more than can be retrieved in the alloted time (`{}`).'.format(
+                campaign_page.get('totalCount'), TAP_CAMPAIGN_COUNT_ERROR_CEILING)
+            LOGGER.error(msg)
+            raise Exception(msg)
+        LOGGER.info('Retrieved offset `{}` campaigns out of `{}`'.format(
+            offset, campaign_page.get('totalCount')))
+        yield campaign_page
+        if campaign_page.get('totalCount') < (
+                offset + MARKETERS_CAMPAIGNS_MAX_LIMIT):
+            offset += MARKETERS_CAMPAIGNS_MAX_LIMIT
+        else:
+            more_campaigns = False
+
+    LOGGER.info('Finished retrieving `{}` campaigns'.format(
+        campaign_page.get('totalCount')))
+
+
+def sync_campaign_page(state, access_token, account_id, campaign_page):
     campaigns = [parse_campaign(campaign) for campaign
-                 in response.get('campaigns', [])]
-
-    for record in campaigns:
-        singer.write_record('campaigns', record, time_extracted=time_extracted)
-
-    LOGGER.info('Done in {} sec.'.format(time_extracted.timestamp() - start.timestamp()))
-
-    campaigns_done = 0
+                 in campaign_page.get('campaigns', [])]
 
     for campaign in campaigns:
+        singer.write_record('campaigns', campaign,
+                            time_extracted=utils.now())
         sync_campaign_performance(state, access_token, account_id,
                                   campaign.get('id'))
 
-        campaigns_done = campaigns_done + 1
 
-        LOGGER.info(
-            '{} of {} campaigns fully synced.'
-            .format(campaigns_done, len(campaigns)))
+def sync_campaigns(state, access_token, account_id):
+    LOGGER.info('Syncing campaigns.')
+
+    for campaign_page in get_campaign_pages(account_id, access_token):
+        sync_campaign_page(state, access_token, account_id, campaign_page)
 
     LOGGER.info('Done!')
-
-
-def parse_link(link):
-    link['creationTime'] = parse_datetime(link.get('creationTime'))
-    link['lastModified'] = parse_datetime(link.get('lastModified'))
-
-    return link
 
 
 def do_sync(args):
@@ -334,13 +347,6 @@ def do_sync(args):
     singer.write_schema('campaign_performance',
                         schemas.campaign_performance,
                         key_properties=["campaignId", "fromDate"],
-                        bookmark_properties=["fromDate"])
-    singer.write_schema('links',
-                        schemas.link,
-                        key_properties=["id"])
-    singer.write_schema('link_performance',
-                        schemas.link_performance,
-                        key_properties=["campaignId", "linkId", "fromDate"],
                         bookmark_properties=["fromDate"])
 
     sync_campaigns(state, access_token, account_id)
