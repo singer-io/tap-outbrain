@@ -19,6 +19,7 @@ import singer.requests
 from singer import utils
 
 from tap_outbrain.discover import discover
+from requests.auth import HTTPBasicAuth
 
 
 LOGGER = singer.get_logger()
@@ -43,6 +44,22 @@ MARKETERS_CAMPAIGNS_MAX_LIMIT = 50
 REPORTS_MARKETERS_PERIODIC_MAX_LIMIT = 100
 
 
+def make_request(method, url, *, headers=None, params=None, auth=None, json=None, data=None):
+    method = method.upper()
+    LOGGER.info(f"Making request: {method} {url} params={params or {}} data={data or {}}")
+
+    req = requests.Request(method, url, headers=headers, params=params, auth=auth, json=json, data=data).prepare()
+    LOGGER.debug(f"Prepared {method} URL: {req.url}")
+    resp = SESSION.send(req)
+
+    LOGGER.info(f"Received {resp.status_code} for {method} {req.url}")
+    if resp.status_code >= 400:
+        LOGGER.error(f"{method} {req.url} [{resp.status_code} – {resp.content!r}]")
+        resp.raise_for_status()
+    
+    return resp
+
+
 @backoff.on_exception(backoff.constant,
                       (requests.exceptions.RequestException),
                       jitter=backoff.random_jitter,
@@ -50,31 +67,19 @@ REPORTS_MARKETERS_PERIODIC_MAX_LIMIT = 100
                       giveup=singer.requests.giveup_on_http_4xx_except_429,
                       interval=30)
 def request(url, access_token, params):
-    LOGGER.info("Making request: GET {} {}".format(url, params))
     headers = {'OB-TOKEN-V1': access_token}
     if 'user_agent' in CONFIG:
         headers['User-Agent'] = CONFIG['user_agent']
 
-    req = requests.Request('GET', url, headers=headers, params=params).prepare()
-    LOGGER.info("GET {}".format(req.url))
-    resp = SESSION.send(req)
-
-    if resp.status_code >= 400:
-        LOGGER.error("GET {} [{} - {}]".format(req.url, resp.status_code, resp.content))
-        resp.raise_for_status()
-
-    return resp
+    return make_request('GET', url, headers=headers, params=params)
 
 
 def generate_token(username, password):
     LOGGER.info("Generating new token using basic auth.")
-
-    auth = requests.auth.HTTPBasicAuth(username, password)
-    response = requests.get('{}/login'.format(BASE_URL), auth=auth)
-    LOGGER.info("Got response code: {}".format(response.status_code))
-    response.raise_for_status()
-
-    return response.json().get('OB-TOKEN-V1')
+    auth = HTTPBasicAuth(username, password)
+    
+    resp = make_request('GET', f'{BASE_URL}/login', auth=auth)
+    return resp.json().get('OB-TOKEN-V1')
 
 
 def parse_datetime(date_time):
