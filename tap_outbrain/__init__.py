@@ -67,6 +67,17 @@ def request(url, access_token, params):
     return resp
 
 
+def generate_token(username, password):
+    LOGGER.info("Generating new token using basic auth.")
+
+    auth = requests.auth.HTTPBasicAuth(username, password)
+    response = requests.get('{}/login'.format(BASE_URL), auth=auth)
+    LOGGER.info("Got response code: {}".format(response.status_code))
+    response.raise_for_status()
+
+    return response.json().get('OB-TOKEN-V1')
+
+
 def parse_datetime(date_time):
     parsed_datetime = dateutil.parser.parse(date_time)
 
@@ -330,7 +341,10 @@ def do_sync(args):
     access_token = config.get('access_token')
 
     if access_token is None:
-        LOGGER.fatal("Failed to access a new access token.")
+        access_token = generate_token(username, password)
+
+    if access_token is None:
+        LOGGER.fatal("Failed to generate a new access token.")
         raise RuntimeError
 
     # NEVER RAISE THIS ABOVE DEBUG!
