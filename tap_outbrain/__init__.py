@@ -308,41 +308,12 @@ def do_sync(args):
     global DEFAULT_START_DATE
     state = DEFAULT_STATE
 
-    with open(args.config) as config_file:
-        config = json.load(config_file)
-        CONFIG.update(config)
+    config = args.config
+    CONFIG.update(config)
 
-    missing_keys = []
-    if 'username' not in config:
-        missing_keys.append('username')
-    else:
-        username = config['username']
+    DEFAULT_START_DATE = config.get('start_date', DEFAULT_START_DATE)
 
-    if 'password' not in config:
-        missing_keys.append('password')
-    else:
-        password = config['password']
-
-    if 'account_id' not in config:
-        missing_keys.append('account_id')
-    else:
-        account_id = config['account_id']
-
-    if 'start_date' not in config:
-        missing_keys.append('start_date')
-    else:
-        # only want the date
-        DEFAULT_START_DATE = config['start_date'][:10]
-
-    if missing_keys:
-        LOGGER.fatal("Missing {}.".format(", ".join(missing_keys)))
-        raise RuntimeError
-
-    access_token = config.get('access_token')
-
-    if access_token is None:
-        access_token = generate_token(username, password)
-
+    access_token = config.get('access_token') or generate_token(config.get('username'), config.get('password'))
     if access_token is None:
         LOGGER.fatal("Failed to generate a new access token.")
         raise RuntimeError
@@ -359,18 +330,13 @@ def do_sync(args):
                         key_properties=["campaignId", "fromDate"],
                         bookmark_properties=["fromDate"])
 
-    sync_campaigns(state, access_token, account_id)
+    sync_campaigns(state, access_token, config.get('account_id'))
 
 
 def main_impl():
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-        '-c', '--config', help='Config file', required=True)
-    parser.add_argument(
-        '-s', '--state', help='State file')
-
-    args = parser.parse_args()
+    args = singer.utils.parse_args(
+        required_config_keys=['account_id', 'username', 'password']
+    )
 
     if args.discover:
         do_discover()

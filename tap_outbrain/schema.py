@@ -1,7 +1,7 @@
 import os
 import json
 from singer import metadata
-from tap_braintree.streams import STREAMS
+from tap_outbrain.streams import STREAMS
 
 
 def get_abs_path(path):
