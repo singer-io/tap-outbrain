@@ -18,6 +18,8 @@ import singer
 import singer.requests
 from singer import utils
 
+from tap_outbrain.discover import discover
+
 import tap_outbrain.schemas as schemas
 
 LOGGER = singer.get_logger()
@@ -63,17 +65,6 @@ def request(url, access_token, params):
         resp.raise_for_status()
 
     return resp
-
-
-def generate_token(username, password):
-    LOGGER.info("Generating new token using basic auth.")
-
-    auth = requests.auth.HTTPBasicAuth(username, password)
-    response = requests.get('{}/login'.format(BASE_URL), auth=auth)
-    LOGGER.info("Got response code: {}".format(response.status_code))
-    response.raise_for_status()
-
-    return response.json().get('OB-TOKEN-V1')
 
 
 def parse_datetime(date_time):
@@ -295,6 +286,11 @@ def sync_campaigns(state, access_token, account_id):
 
     LOGGER.info('Done!')
 
+def do_discover():
+    LOGGER.info("Starting discovery")
+    catalog = discover()
+    json.dump(catalog.to_dict(), sys.stdout, indent=2)
+    LOGGER.info("Finished discover")
 
 def do_sync(args):
     #pylint: disable=global-statement
@@ -334,10 +330,7 @@ def do_sync(args):
     access_token = config.get('access_token')
 
     if access_token is None:
-        access_token = generate_token(username, password)
-
-    if access_token is None:
-        LOGGER.fatal("Failed to generate a new access token.")
+        LOGGER.fatal("Failed to access a new access token.")
         raise RuntimeError
 
     # NEVER RAISE THIS ABOVE DEBUG!
@@ -365,7 +358,10 @@ def main_impl():
 
     args = parser.parse_args()
 
-    do_sync(args)
+    if args.discover:
+        do_discover()
+    else:
+        do_sync(args)
 
 
 def main():
