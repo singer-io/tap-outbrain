@@ -44,6 +44,14 @@ MARKETERS_CAMPAIGNS_MAX_LIMIT = 50
 REPORTS_MARKETERS_PERIODIC_MAX_LIMIT = 100
 
 
+@backoff.on_exception(
+    backoff.constant,
+    (requests.exceptions.RequestException),
+    jitter=backoff.random_jitter,
+    max_tries=5,
+    giveup=singer.requests.giveup_on_http_4xx_except_429,
+    interval=30
+)
 def make_request(method, url, *, headers=None, params=None, auth=None, json=None, data=None):
     method = method.upper()
     LOGGER.info(f"Making request: {method} {url} params={params or {}} data={data or {}}")
@@ -56,16 +64,10 @@ def make_request(method, url, *, headers=None, params=None, auth=None, json=None
     if resp.status_code >= 400:
         LOGGER.error(f"{method} {req.url} [{resp.status_code} – {resp.content!r}]")
         resp.raise_for_status()
-    
+
     return resp
 
 
-@backoff.on_exception(backoff.constant,
-                      (requests.exceptions.RequestException),
-                      jitter=backoff.random_jitter,
-                      max_tries=5,
-                      giveup=singer.requests.giveup_on_http_4xx_except_429,
-                      interval=30)
 def request(url, access_token, params):
     headers = {'OB-TOKEN-V1': access_token}
     if 'user_agent' in CONFIG:
