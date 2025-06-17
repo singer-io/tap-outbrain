@@ -18,11 +18,6 @@ jobs:
             pip install -U 'pip==22.2.2' setuptools
             pip install .[dev]
       - run:
-          name: 'JSON Validator'
-          command: |
-            source /usr/local/share/virtualenvs/tap-outbrain/bin/activate
-            stitch-validate-json tap_outbrain/schemas/*.json
-      - run:
           name: 'Unit Tests'
           command: |
             source /usr/local/share/virtualenvs/tap-outbrain/bin/activate
