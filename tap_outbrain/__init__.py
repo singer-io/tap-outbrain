@@ -20,7 +20,6 @@ from singer import utils
 
 from tap_outbrain.discover import discover
 
-import tap_outbrain.schemas as schemas
 
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
@@ -321,12 +320,17 @@ def do_sync(args):
     # NEVER RAISE THIS ABOVE DEBUG!
     LOGGER.debug('Using access token `{}`'.format(access_token))
 
+    with open("tap_outbrain/schemas/campaign.json") as f:
+        campaign = json.load(f)
+
+    with open("tap_outbrain/schemas/campaign_performance.json") as f:
+        campaign_performance = json.load(f)
 
     singer.write_schema('campaigns',
-                        schemas.campaign,
+                        campaign,
                         key_properties=["id"])
     singer.write_schema('campaign_performance',
-                        schemas.campaign_performance,
+                        campaign_performance,
                         key_properties=["campaignId", "fromDate"],
                         bookmark_properties=["fromDate"])
 

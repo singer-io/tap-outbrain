@@ -7,7 +7,7 @@ class Campaign:
 
 class CampaignPerformance:
     name = "campaign_performance"
-    key_properties = ["campaignId"]
+    key_properties = ["campaignId", "fromDate"]
     replication_keys = "created_at"
     replication_method = "INCREMENTAL"
 
