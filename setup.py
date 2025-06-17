@@ -16,6 +16,11 @@ setup(name='tap-outbrain',
           'requests==2.32.4',
           'python-dateutil==2.9.0'
       ],
+      extras_require = {
+        "dev": [
+          "nose",
+        ],
+      },
       entry_points='''
           [console_scripts]
           tap-outbrain=tap_outbrain:main
