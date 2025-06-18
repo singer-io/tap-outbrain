@@ -45,7 +45,6 @@ class OutbrainClient:
             interval=30,
         )
         def _call():
-            method = method.upper()
             LOGGER.info(
                 f"Making request: {method} {url} params={params or {}} data={data or {}}"
             )
