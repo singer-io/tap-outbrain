@@ -290,7 +290,7 @@ def do_sync(args):
     config = args.config
     CONFIG.update(config)
 
-    DEFAULT_START_DATE = config.get('start_date', DEFAULT_START_DATE)
+    DEFAULT_START_DATE = config.get('start_date')[:10]
 
     access_token = config.get('access_token') or generate_token(config.get('username'), config.get('password'))
     if access_token is None:
@@ -319,7 +319,7 @@ def do_sync(args):
 
 def main_impl():
     args = singer.utils.parse_args(
-        required_config_keys=['account_id', 'username', 'password']
+        required_config_keys=['account_id', 'username', 'password', 'start_date']
     )
 
     if args.discover:
