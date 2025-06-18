@@ -12,9 +12,7 @@ import sys
 import time
 import dateutil.parser
 
-import requests
 import singer
-import singer.requests
 from singer import utils
 
 from tap_outbrain.client import OutbrainClient
@@ -23,7 +21,6 @@ from requests.auth import HTTPBasicAuth
 
 
 LOGGER = singer.get_logger()
-SESSION = requests.Session()
 
 BASE_URL = 'https://api.outbrain.com/amplify/v0.1'
 CONFIG = {}

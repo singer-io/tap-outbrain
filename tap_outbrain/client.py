@@ -63,6 +63,7 @@ class OutbrainClient:
 
             if resp.status_code == 429:
                 try:
+                    # Reference: https://amplifyv01.docs.apiary.io/#reference/rate-limits
                     self._retry_after = int(
                         float(resp.headers.get("rate-limit-msec-left", RETRY_RATE_LIMIT_MS))
                     )
