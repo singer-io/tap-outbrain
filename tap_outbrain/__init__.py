@@ -339,7 +339,12 @@ def do_sync(args):
 
 def main_impl():
     args = singer.utils.parse_args(
-        required_config_keys=['account_id', 'username', 'password', 'start_date']
+        required_config_keys=[
+            'account_id',
+            'username',
+            'password',
+            'start_date'
+        ]
     )
 
     if args.discover:
