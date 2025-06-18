@@ -45,9 +45,7 @@ class OutbrainClient:
             interval=30,
         )
         def _call():
-            LOGGER.info(
-                f"Making request: {method} {url} params={params or {}} data={data or {}}"
-            )
+            LOGGER.info(f"Making request: {method} {url} params={params or {}} data={data or {}}")
 
             req = requests.Request(
                 method,
@@ -66,11 +64,7 @@ class OutbrainClient:
             if resp.status_code == 429:
                 try:
                     self._retry_after = int(
-                        float(
-                            resp.headers.get(
-                                "rate-limit-msec-left", RETRY_RATE_LIMIT_MS
-                            )
-                        )
+                        float(resp.headers.get("rate-limit-msec-left", RETRY_RATE_LIMIT_MS))
                     )
                 except (TypeError, ValueError):
                     self._retry_after = RETRY_RATE_LIMIT_MS
