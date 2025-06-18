@@ -343,9 +343,7 @@ def main_impl():
             'account_id',
             'username',
             'password',
-            'start_date'
-        ]
-    )
+            'start_date'])
 
     if args.discover:
         do_discover()
