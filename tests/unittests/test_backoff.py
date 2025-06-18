@@ -1,5 +1,3 @@
-# test_outbrain_client_unittest.py
-
 import unittest
 from unittest.mock import patch
 import time
