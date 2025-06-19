@@ -12,17 +12,15 @@ import sys
 import time
 import dateutil.parser
 
-import backoff
-import requests
 import singer
-import singer.requests
 from singer import utils
 
+from tap_outbrain.client import OutbrainClient
 from tap_outbrain.discover import discover
+from requests.auth import HTTPBasicAuth
 
 
 LOGGER = singer.get_logger()
-SESSION = requests.Session()
 
 BASE_URL = 'https://api.outbrain.com/amplify/v0.1'
 CONFIG = {}
@@ -43,38 +41,20 @@ MARKETERS_CAMPAIGNS_MAX_LIMIT = 50
 REPORTS_MARKETERS_PERIODIC_MAX_LIMIT = 100
 
 
-@backoff.on_exception(backoff.constant,
-                      (requests.exceptions.RequestException),
-                      jitter=backoff.random_jitter,
-                      max_tries=5,
-                      giveup=singer.requests.giveup_on_http_4xx_except_429,
-                      interval=30)
 def request(url, access_token, params):
-    LOGGER.info("Making request: GET {} {}".format(url, params))
     headers = {'OB-TOKEN-V1': access_token}
     if 'user_agent' in CONFIG:
         headers['User-Agent'] = CONFIG['user_agent']
 
-    req = requests.Request('GET', url, headers=headers, params=params).prepare()
-    LOGGER.info("GET {}".format(req.url))
-    resp = SESSION.send(req)
-
-    if resp.status_code >= 400:
-        LOGGER.error("GET {} [{} - {}]".format(req.url, resp.status_code, resp.content))
-        resp.raise_for_status()
-
-    return resp
+    return OutbrainClient().make_request('GET', url, headers=headers, params=params)
 
 
 def generate_token(username, password):
     LOGGER.info("Generating new token using basic auth.")
+    auth = HTTPBasicAuth(username, password)
 
-    auth = requests.auth.HTTPBasicAuth(username, password)
-    response = requests.get('{}/login'.format(BASE_URL), auth=auth)
-    LOGGER.info("Got response code: {}".format(response.status_code))
-    response.raise_for_status()
-
-    return response.json().get('OB-TOKEN-V1')
+    resp = OutbrainClient().make_request('GET', f'{BASE_URL}/login', auth=auth)
+    return resp.json().get('OB-TOKEN-V1')
 
 
 def parse_datetime(date_time):
