@@ -12,16 +12,15 @@ import sys
 import time
 import dateutil.parser
 
-import backoff
-import requests
 import singer
-import singer.requests
 from singer import utils
 
-import tap_outbrain.schemas as schemas
+from tap_outbrain.client import OutbrainClient
+from tap_outbrain.discover import discover
+from requests.auth import HTTPBasicAuth
+
 
 LOGGER = singer.get_logger()
-SESSION = requests.Session()
 
 BASE_URL = 'https://api.outbrain.com/amplify/v0.1'
 CONFIG = {}
@@ -42,38 +41,20 @@ MARKETERS_CAMPAIGNS_MAX_LIMIT = 50
 REPORTS_MARKETERS_PERIODIC_MAX_LIMIT = 100
 
 
-@backoff.on_exception(backoff.constant,
-                      (requests.exceptions.RequestException),
-                      jitter=backoff.random_jitter,
-                      max_tries=5,
-                      giveup=singer.requests.giveup_on_http_4xx_except_429,
-                      interval=30)
 def request(url, access_token, params):
-    LOGGER.info("Making request: GET {} {}".format(url, params))
     headers = {'OB-TOKEN-V1': access_token}
     if 'user_agent' in CONFIG:
         headers['User-Agent'] = CONFIG['user_agent']
 
-    req = requests.Request('GET', url, headers=headers, params=params).prepare()
-    LOGGER.info("GET {}".format(req.url))
-    resp = SESSION.send(req)
-
-    if resp.status_code >= 400:
-        LOGGER.error("GET {} [{} - {}]".format(req.url, resp.status_code, resp.content))
-        resp.raise_for_status()
-
-    return resp
+    return OutbrainClient().make_request('GET', url, headers=headers, params=params)
 
 
 def generate_token(username, password):
     LOGGER.info("Generating new token using basic auth.")
+    auth = HTTPBasicAuth(username, password)
 
-    auth = requests.auth.HTTPBasicAuth(username, password)
-    response = requests.get('{}/login'.format(BASE_URL), auth=auth)
-    LOGGER.info("Got response code: {}".format(response.status_code))
-    response.raise_for_status()
-
-    return response.json().get('OB-TOKEN-V1')
+    resp = OutbrainClient().make_request('GET', f'{BASE_URL}/login', auth=auth)
+    return resp.json().get('OB-TOKEN-V1')
 
 
 def parse_datetime(date_time):
@@ -295,47 +276,23 @@ def sync_campaigns(state, access_token, account_id):
 
     LOGGER.info('Done!')
 
+def do_discover():
+    LOGGER.info("Starting discovery")
+    catalog = discover()
+    json.dump(catalog.to_dict(), sys.stdout, indent=2)
+    LOGGER.info("Finished discover")
 
 def do_sync(args):
     #pylint: disable=global-statement
     global DEFAULT_START_DATE
     state = DEFAULT_STATE
 
-    with open(args.config) as config_file:
-        config = json.load(config_file)
-        CONFIG.update(config)
+    config = args.config
+    CONFIG.update(config)
 
-    missing_keys = []
-    if 'username' not in config:
-        missing_keys.append('username')
-    else:
-        username = config['username']
+    DEFAULT_START_DATE = config.get('start_date')[:10]
 
-    if 'password' not in config:
-        missing_keys.append('password')
-    else:
-        password = config['password']
-
-    if 'account_id' not in config:
-        missing_keys.append('account_id')
-    else:
-        account_id = config['account_id']
-
-    if 'start_date' not in config:
-        missing_keys.append('start_date')
-    else:
-        # only want the date
-        DEFAULT_START_DATE = config['start_date'][:10]
-
-    if missing_keys:
-        LOGGER.fatal("Missing {}.".format(", ".join(missing_keys)))
-        raise RuntimeError
-
-    access_token = config.get('access_token')
-
-    if access_token is None:
-        access_token = generate_token(username, password)
-
+    access_token = config.get('access_token') or generate_token(config.get('username'), config.get('password'))
     if access_token is None:
         LOGGER.fatal("Failed to generate a new access token.")
         raise RuntimeError
@@ -343,29 +300,35 @@ def do_sync(args):
     # NEVER RAISE THIS ABOVE DEBUG!
     LOGGER.debug('Using access token `{}`'.format(access_token))
 
+    with open("tap_outbrain/schemas/campaign.json") as f:
+        campaign = json.load(f)
+
+    with open("tap_outbrain/schemas/campaign_performance.json") as f:
+        campaign_performance = json.load(f)
 
     singer.write_schema('campaigns',
-                        schemas.campaign,
+                        campaign,
                         key_properties=["id"])
     singer.write_schema('campaign_performance',
-                        schemas.campaign_performance,
+                        campaign_performance,
                         key_properties=["campaignId", "fromDate"],
                         bookmark_properties=["fromDate"])
 
-    sync_campaigns(state, access_token, account_id)
+    sync_campaigns(state, access_token, config.get('account_id'))
 
 
 def main_impl():
-    parser = argparse.ArgumentParser()
+    args = singer.utils.parse_args(
+        required_config_keys=[
+            'account_id',
+            'username',
+            'password',
+            'start_date'])
 
-    parser.add_argument(
-        '-c', '--config', help='Config file', required=True)
-    parser.add_argument(
-        '-s', '--state', help='State file')
-
-    args = parser.parse_args()
-
-    do_sync(args)
+    if args.discover:
+        do_discover()
+    else:
+        do_sync(args)
 
 
 def main():
