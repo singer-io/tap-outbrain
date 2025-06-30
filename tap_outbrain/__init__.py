@@ -294,9 +294,10 @@ def do_discover():
 def do_sync(catalog: singer.Catalog, config: Dict, state):
     #pylint: disable=global-statement
     global DEFAULT_START_DATE
-    DEFAULT_START_DATE = config.get('start_date')[:10]
 
     CONFIG.update(config)
+
+    DEFAULT_START_DATE = config.get('start_date')[:10]
 
     access_token = config.get('access_token') or generate_token(config.get('username'), config.get('password'))
     if access_token is None:
