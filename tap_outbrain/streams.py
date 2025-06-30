@@ -14,3 +14,8 @@ STREAMS = {
     "campaign": Campaign,
     "campaign_performance": CampaignPerformance,
 }
+
+
+SUB_STREAMS = {
+    'campaign': ['campaign_performance']
+}

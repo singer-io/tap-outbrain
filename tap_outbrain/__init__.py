@@ -17,6 +17,7 @@ from singer import utils
 
 from tap_outbrain.client import OutbrainClient
 from tap_outbrain.discover import discover
+from tap_outbrain.streams import SUB_STREAMS
 from typing import Dict
 from requests.auth import HTTPBasicAuth
 
@@ -40,6 +41,11 @@ MARKETERS_CAMPAIGNS_MAX_LIMIT = 50
 # This is an arbitrary limit and can be tuned later down the road if we
 # see need for it. (Tested with 200 at least)
 REPORTS_MARKETERS_PERIODIC_MAX_LIMIT = 100
+
+
+class StreamSelectionError(Exception):
+    """Raised when required stream is not selected for sync."""
+    pass
 
 
 def request(url, access_token, params):
@@ -266,9 +272,14 @@ def get_campaign_pages(account_id, access_token):
         campaign_page.get('totalCount')))
 
 
-def sync_campaign_page(state, access_token, account_id, campaign_page):
+def sync_campaign_page(state, access_token, account_id, campaign_page, selected_streams):
     campaigns = [parse_campaign(campaign) for campaign
                  in campaign_page.get('campaigns', [])]
+
+    campaign_sub_streams = SUB_STREAMS.get('campaign')
+    
+    if 'campaign_performance' not in campaign_sub_streams or 'campaign_performance' not in selected_streams:
+        return
 
     for campaign in campaigns:
         singer.write_record('campaigns', campaign,
@@ -277,11 +288,11 @@ def sync_campaign_page(state, access_token, account_id, campaign_page):
                                   campaign.get('id'))
 
 
-def sync_campaigns(state, access_token, account_id):
+def sync_campaigns(state, access_token, account_id, selected_streams):
     LOGGER.info('Syncing campaigns.')
 
     for campaign_page in get_campaign_pages(account_id, access_token):
-        sync_campaign_page(state, access_token, account_id, campaign_page)
+        sync_campaign_page(state, access_token, account_id, campaign_page, selected_streams)
 
     LOGGER.info('Done!')
 
@@ -307,20 +318,25 @@ def do_sync(catalog: singer.Catalog, config: Dict, state):
     # NEVER RAISE THIS ABOVE DEBUG!
     LOGGER.debug('Using access token `{}`'.format(access_token))
 
-    selected_streams_to_sync = []
+    selected_streams = []
     for stream in catalog.get_selected_streams(state):
-        selected_streams_to_sync.append(stream.stream)
-    LOGGER.info('selected_streams: {}'.format(selected_streams_to_sync))
+        selected_streams.append(stream.stream)
+    LOGGER.info('selected_streams: {}'.format(selected_streams))
 
     for stream in catalog.streams:
         stream_id = stream.tap_stream_id
-        if stream_id in selected_streams_to_sync:
+        if stream_id in selected_streams:
             singer.write_schema(
                 stream_id,
                 stream.schema.to_dict(),
                 stream.key_properties)
 
-    sync_campaigns(state, access_token, config.get('account_id'))
+    # Sync only for campaigns as Parent and campaign_performance as child
+    if not 'campaign' in selected_streams:
+        msg = "Stream 'campaign' is not selected for sync"
+        LOGGER.error(msg)
+        raise StreamSelectionError(msg)
+    sync_campaigns(state, access_token, config.get('account_id'), selected_streams)
 
 
 def main_impl():
