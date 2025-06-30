@@ -307,13 +307,11 @@ def do_sync(catalog: singer.Catalog, config: Dict, state):
     # NEVER RAISE THIS ABOVE DEBUG!
     LOGGER.debug('Using access token `{}`'.format(access_token))
 
-    # Get ALL selected streams from catalog
     selected_streams_to_sync = []
     for stream in catalog.get_selected_streams(state):
         selected_streams_to_sync.append(stream.stream)
     LOGGER.info('selected_streams: {}'.format(selected_streams_to_sync))
 
-    # Loop over streams in catalog
     for stream in catalog.streams:
         stream_id = stream.tap_stream_id
         if stream_id in selected_streams_to_sync:
