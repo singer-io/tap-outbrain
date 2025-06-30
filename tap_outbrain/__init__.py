@@ -17,6 +17,7 @@ from singer import utils
 
 from tap_outbrain.client import OutbrainClient
 from tap_outbrain.discover import discover
+from typing import Dict
 from requests.auth import HTTPBasicAuth
 
 
@@ -62,6 +63,14 @@ def parse_datetime(date_time):
 
     # the assumption is that the timestamp comes in in UTC
     return parsed_datetime.isoformat('T') + 'Z'
+
+
+def get_abs_path(path):
+    return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
+
+
+def load_schema(entity_name):
+    return utils.load_json(get_abs_path('schemas/{}.json'.format(entity_name)))
 
 
 def parse_performance(result, extra_fields):
@@ -282,15 +291,12 @@ def do_discover():
     json.dump(catalog.to_dict(), sys.stdout, indent=2)
     LOGGER.info("Finished discover")
 
-def do_sync(args):
+def do_sync(catalog: singer.Catalog, config: Dict, state):
     #pylint: disable=global-statement
     global DEFAULT_START_DATE
-    state = DEFAULT_STATE
-
-    config = args.config
-    CONFIG.update(config)
-
     DEFAULT_START_DATE = config.get('start_date')[:10]
+
+    CONFIG.update(config)
 
     access_token = config.get('access_token') or generate_token(config.get('username'), config.get('password'))
     if access_token is None:
@@ -300,19 +306,20 @@ def do_sync(args):
     # NEVER RAISE THIS ABOVE DEBUG!
     LOGGER.debug('Using access token `{}`'.format(access_token))
 
-    with open("tap_outbrain/schemas/campaign.json") as f:
-        campaign = json.load(f)
+    # Get ALL selected streams from catalog
+    selected_streams_to_sync = []
+    for stream in catalog.get_selected_streams(state):
+        selected_streams_to_sync.append(stream.stream)
+    LOGGER.info('selected_streams: {}'.format(selected_streams_to_sync))
 
-    with open("tap_outbrain/schemas/campaign_performance.json") as f:
-        campaign_performance = json.load(f)
-
-    singer.write_schema('campaigns',
-                        campaign,
-                        key_properties=["id"])
-    singer.write_schema('campaign_performance',
-                        campaign_performance,
-                        key_properties=["campaignId", "fromDate"],
-                        bookmark_properties=["fromDate"])
+    # Loop over streams in catalog
+    for stream in catalog.streams:
+        stream_id = stream.tap_stream_id
+        if stream_id in selected_streams_to_sync:
+            singer.write_schema(
+                stream_id,
+                stream.schema.to_dict(),
+                stream.key_properties)
 
     sync_campaigns(state, access_token, config.get('account_id'))
 
@@ -327,8 +334,9 @@ def main_impl():
 
     if args.discover:
         do_discover()
-    else:
-        do_sync(args)
+    elif args.catalog:
+        state = args.state or DEFAULT_STATE
+        do_sync(args.catalog, args.config, state)
 
 
 def main():

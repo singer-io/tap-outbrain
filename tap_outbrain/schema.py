@@ -31,11 +31,11 @@ def get_schemas():
         mdata = metadata.get_standard_metadata(
             schema=schema,
             key_properties=getattr(stream_metadata, "key_properties"),
-            valid_replication_keys=(getattr(stream_metadata, "replication_keys") or []),
-            replication_method=getattr(stream_metadata, "replication_method"),
+            valid_replication_keys=getattr(stream_metadata, "replication_keys", []),
+            replication_method=getattr(stream_metadata, "replication_method", None),
         )
         mdata = metadata.to_map(mdata)
-        automatic_keys = getattr(stream_metadata, "replication_keys") or []
+        automatic_keys = getattr(stream_metadata, "replication_keys", [])
         for field_name in schema["properties"].keys():
             if field_name in automatic_keys:
                 mdata = metadata.write(
