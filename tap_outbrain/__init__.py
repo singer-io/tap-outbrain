@@ -17,7 +17,7 @@ from singer import utils
 
 from tap_outbrain.client import OutbrainClient
 from tap_outbrain.discover import discover
-from tap_outbrain.streams import SUB_STREAMS
+from tap_outbrain import streams
 from typing import Dict
 from requests.auth import HTTPBasicAuth
 
@@ -268,7 +268,7 @@ def sync_campaign_page(state, access_token, account_id, campaign_page, selected_
     campaigns = [parse_campaign(campaign) for campaign
                  in campaign_page.get('campaigns', [])]
 
-    campaign_sub_streams = SUB_STREAMS.get('campaign')
+    campaign_sub_streams = streams.SUB_STREAMS.get('campaign')
     if 'campaign_performance' not in campaign_sub_streams or 'campaign_performance' not in selected_streams:
         LOGGER.info('Skipping sync for campaign performance')
         return
@@ -319,9 +319,9 @@ def do_sync(catalog: singer.Catalog, config: Dict, state):
     if 'campaign' in selected_streams:
         with open("tap_outbrain/schemas/campaign.json") as f:
             campaign = json.load(f)
-        singer.write_schema('campaign',
+        singer.write_schema(streams.Campaign.name,
                             campaign,
-                            key_properties=["id"])
+                            key_properties=streams.Campaign.key_properties)
     else:
         msg = "Stream campaign is not selected for sync"
         LOGGER.error(msg)
@@ -330,10 +330,10 @@ def do_sync(catalog: singer.Catalog, config: Dict, state):
     if 'campaign_performance' in selected_streams:
         with open("tap_outbrain/schemas/campaign_performance.json") as f:
             campaign_performance = json.load(f)
-        singer.write_schema('campaign_performance',
+        singer.write_schema(streams.CampaignPerformance.name,
                             campaign_performance,
-                            key_properties=["campaignId", "fromDate"],
-                            bookmark_properties=["fromDate"])
+                            key_properties=streams.CampaignPerformance.key_properties,
+                            bookmark_properties=streams.CampaignPerformance.bookmark_properties)
 
     sync_campaigns(state, access_token, config.get('account_id'), selected_streams)
 
