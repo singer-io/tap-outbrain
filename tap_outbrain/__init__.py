@@ -71,14 +71,6 @@ def parse_datetime(date_time):
     return parsed_datetime.isoformat('T') + 'Z'
 
 
-def get_abs_path(path):
-    return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
-
-
-def load_schema(entity_name):
-    return utils.load_json(get_abs_path('schemas/{}.json'.format(entity_name)))
-
-
 def parse_performance(result, extra_fields):
     metrics = result.get('metrics', {})
     metadata = result.get('metadata', {})
@@ -277,8 +269,8 @@ def sync_campaign_page(state, access_token, account_id, campaign_page, selected_
                  in campaign_page.get('campaigns', [])]
 
     campaign_sub_streams = SUB_STREAMS.get('campaign')
-    
     if 'campaign_performance' not in campaign_sub_streams or 'campaign_performance' not in selected_streams:
+        LOGGER.info('Skipping sync for campaign performance')
         return
 
     for campaign in campaigns:
