@@ -310,24 +310,31 @@ def do_sync(catalog: singer.Catalog, config: Dict, state):
     # NEVER RAISE THIS ABOVE DEBUG!
     LOGGER.debug('Using access token `{}`'.format(access_token))
 
+    with open("tap_outbrain/schemas/campaign.json") as f:
+        campaign = json.load(f)
+
+    with open("tap_outbrain/schemas/campaign_performance.json") as f:
+        campaign_performance = json.load(f)
+
+    singer.write_schema('campaigns',
+                        campaign,
+                        key_properties=["id"])
+    singer.write_schema('campaign_performance',
+                        campaign_performance,
+                        key_properties=["campaignId", "fromDate"],
+                        bookmark_properties=["fromDate"])
+
     selected_streams = []
     for stream in catalog.get_selected_streams(state):
         selected_streams.append(stream.stream)
     LOGGER.info('selected_streams: {}'.format(selected_streams))
-
-    for stream in catalog.streams:
-        stream_id = stream.tap_stream_id
-        if stream_id in selected_streams:
-            singer.write_schema(
-                stream_id,
-                stream.schema.to_dict(),
-                stream.key_properties)
 
     # Sync only for campaigns as Parent and campaign_performance as child
     if not 'campaign' in selected_streams:
         msg = "Stream 'campaign' is not selected for sync"
         LOGGER.error(msg)
         raise StreamSelectionError(msg)
+
     sync_campaigns(state, access_token, config.get('account_id'), selected_streams)
 
 
