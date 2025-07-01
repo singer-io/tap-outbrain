@@ -269,8 +269,11 @@ def sync_campaign_page(state, access_token, account_id, campaign_page, selected_
                  in campaign_page.get('campaigns', [])]
 
     campaign_sub_streams = streams.SUB_STREAMS.get('campaign')
-    if 'campaign_performance' not in campaign_sub_streams or 'campaign_performance' not in selected_streams:
-        LOGGER.info('Skipping sync for campaign performance')
+    if (
+        streams.CampaignPerformance.name not in campaign_sub_streams
+        or streams.CampaignPerformance.name not in selected_streams
+    ):
+        LOGGER.info("Skipping sync for campaign performance")
         return
 
     for campaign in campaigns:
@@ -316,8 +319,8 @@ def do_sync(catalog: singer.Catalog, config: Dict, state):
     LOGGER.info("selected_streams: {}".format(selected_streams))
 
     # Sync only for campaigns as Parent and campaign_performance as child
-    if 'campaign' in selected_streams:
-        with open("tap_outbrain/schemas/campaign.json") as f:
+    if streams.Campaign.name in selected_streams:
+        with open(f"tap_outbrain/schemas/{streams.Campaign.name}.json") as f:
             campaign = json.load(f)
         singer.write_schema(streams.Campaign.name,
                             campaign,
@@ -327,8 +330,8 @@ def do_sync(catalog: singer.Catalog, config: Dict, state):
         LOGGER.error(msg)
         raise StreamSelectionError(msg)
 
-    if 'campaign_performance' in selected_streams:
-        with open("tap_outbrain/schemas/campaign_performance.json") as f:
+    if streams.CampaignPerformance.name in selected_streams:
+        with open(f"tap_outbrain/schemas/{streams.CampaignPerformance.name}.json") as f:
             campaign_performance = json.load(f)
         singer.write_schema(streams.CampaignPerformance.name,
                             campaign_performance,
