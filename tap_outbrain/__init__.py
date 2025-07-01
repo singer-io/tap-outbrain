@@ -330,7 +330,7 @@ def do_sync(catalog: singer.Catalog, config: Dict, state):
     LOGGER.info('selected_streams: {}'.format(selected_streams))
 
     # Sync only for campaigns as Parent and campaign_performance as child
-    if not 'campaign' in selected_streams:
+    if 'campaign' not in selected_streams:
         msg = "Stream 'campaign' is not selected for sync"
         LOGGER.error(msg)
         raise StreamSelectionError(msg)
