@@ -1,6 +1,7 @@
 class Campaign:
     name = "campaign"
     key_properties = ["id"]
+    replication_keys = None
     replication_method = "FULL_TABLE"
 
 
