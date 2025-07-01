@@ -310,30 +310,30 @@ def do_sync(catalog: singer.Catalog, config: Dict, state):
     # NEVER RAISE THIS ABOVE DEBUG!
     LOGGER.debug('Using access token `{}`'.format(access_token))
 
-    with open("tap_outbrain/schemas/campaign.json") as f:
-        campaign = json.load(f)
-
-    with open("tap_outbrain/schemas/campaign_performance.json") as f:
-        campaign_performance = json.load(f)
-
-    singer.write_schema('campaigns',
-                        campaign,
-                        key_properties=["id"])
-    singer.write_schema('campaign_performance',
-                        campaign_performance,
-                        key_properties=["campaignId", "fromDate"],
-                        bookmark_properties=["fromDate"])
-
     selected_streams = []
     for stream in catalog.get_selected_streams(state):
         selected_streams.append(stream.stream)
-    LOGGER.info('selected_streams: {}'.format(selected_streams))
+    LOGGER.info("selected_streams: {}".format(selected_streams))
 
     # Sync only for campaigns as Parent and campaign_performance as child
-    if 'campaign' not in selected_streams:
-        msg = "Stream 'campaign' is not selected for sync"
+    if 'campaign' in selected_streams:
+        with open("tap_outbrain/schemas/campaign.json") as f:
+            campaign = json.load(f)
+        singer.write_schema('campaign',
+                            campaign,
+                            key_properties=["id"])
+    else:
+        msg = "Stream campaign is not selected for sync"
         LOGGER.error(msg)
         raise StreamSelectionError(msg)
+
+    if 'campaign_performance' in selected_streams:
+        with open("tap_outbrain/schemas/campaign_performance.json") as f:
+            campaign_performance = json.load(f)
+        singer.write_schema('campaign_performance',
+                            campaign_performance,
+                            key_properties=["campaignId", "fromDate"],
+                            bookmark_properties=["fromDate"])
 
     sync_campaigns(state, access_token, config.get('account_id'), selected_streams)
 
