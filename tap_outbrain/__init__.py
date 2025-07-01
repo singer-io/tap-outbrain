@@ -17,6 +17,8 @@ from singer import utils
 
 from tap_outbrain.client import OutbrainClient
 from tap_outbrain.discover import discover
+from tap_outbrain import streams
+from typing import Dict
 from requests.auth import HTTPBasicAuth
 
 
@@ -39,6 +41,11 @@ MARKETERS_CAMPAIGNS_MAX_LIMIT = 50
 # This is an arbitrary limit and can be tuned later down the road if we
 # see need for it. (Tested with 200 at least)
 REPORTS_MARKETERS_PERIODIC_MAX_LIMIT = 100
+
+
+class StreamSelectionError(Exception):
+    """Raised when required stream is not selected for sync."""
+    pass
 
 
 def request(url, access_token, params):
@@ -257,9 +264,17 @@ def get_campaign_pages(account_id, access_token):
         campaign_page.get('totalCount')))
 
 
-def sync_campaign_page(state, access_token, account_id, campaign_page):
+def sync_campaign_page(state, access_token, account_id, campaign_page, selected_streams):
     campaigns = [parse_campaign(campaign) for campaign
                  in campaign_page.get('campaigns', [])]
+
+    campaign_sub_streams = streams.SUB_STREAMS.get('campaign')
+    if (
+        streams.CampaignPerformance.name not in campaign_sub_streams
+        or streams.CampaignPerformance.name not in selected_streams
+    ):
+        LOGGER.info("Skipping sync for campaign performance")
+        return
 
     for campaign in campaigns:
         singer.write_record('campaigns', campaign,
@@ -268,11 +283,11 @@ def sync_campaign_page(state, access_token, account_id, campaign_page):
                                   campaign.get('id'))
 
 
-def sync_campaigns(state, access_token, account_id):
+def sync_campaigns(state, access_token, account_id, selected_streams):
     LOGGER.info('Syncing campaigns.')
 
     for campaign_page in get_campaign_pages(account_id, access_token):
-        sync_campaign_page(state, access_token, account_id, campaign_page)
+        sync_campaign_page(state, access_token, account_id, campaign_page, selected_streams)
 
     LOGGER.info('Done!')
 
@@ -282,12 +297,10 @@ def do_discover():
     json.dump(catalog.to_dict(), sys.stdout, indent=2)
     LOGGER.info("Finished discover")
 
-def do_sync(args):
+def do_sync(catalog: singer.Catalog, config: Dict, state):
     #pylint: disable=global-statement
     global DEFAULT_START_DATE
-    state = DEFAULT_STATE
 
-    config = args.config
     CONFIG.update(config)
 
     DEFAULT_START_DATE = config.get('start_date')[:10]
@@ -300,21 +313,32 @@ def do_sync(args):
     # NEVER RAISE THIS ABOVE DEBUG!
     LOGGER.debug('Using access token `{}`'.format(access_token))
 
-    with open("tap_outbrain/schemas/campaign.json") as f:
-        campaign = json.load(f)
+    selected_streams = []
+    for stream in catalog.get_selected_streams(state):
+        selected_streams.append(stream.stream)
+    LOGGER.info("selected_streams: {}".format(selected_streams))
 
-    with open("tap_outbrain/schemas/campaign_performance.json") as f:
-        campaign_performance = json.load(f)
+    # Sync only for campaigns as Parent and campaign_performance as child
+    if streams.Campaign.name in selected_streams:
+        with open(f"tap_outbrain/schemas/{streams.Campaign.name}.json") as f:
+            campaign = json.load(f)
+        singer.write_schema(streams.Campaign.name,
+                            campaign,
+                            key_properties=streams.Campaign.key_properties)
+    else:
+        msg = "Stream campaign is not selected for sync"
+        LOGGER.error(msg)
+        raise StreamSelectionError(msg)
 
-    singer.write_schema('campaigns',
-                        campaign,
-                        key_properties=["id"])
-    singer.write_schema('campaign_performance',
-                        campaign_performance,
-                        key_properties=["campaignId", "fromDate"],
-                        bookmark_properties=["fromDate"])
+    if streams.CampaignPerformance.name in selected_streams:
+        with open(f"tap_outbrain/schemas/{streams.CampaignPerformance.name}.json") as f:
+            campaign_performance = json.load(f)
+        singer.write_schema(streams.CampaignPerformance.name,
+                            campaign_performance,
+                            key_properties=streams.CampaignPerformance.key_properties,
+                            bookmark_properties=streams.CampaignPerformance.bookmark_properties)
 
-    sync_campaigns(state, access_token, config.get('account_id'))
+    sync_campaigns(state, access_token, config.get('account_id'), selected_streams)
 
 
 def main_impl():
@@ -327,8 +351,9 @@ def main_impl():
 
     if args.discover:
         do_discover()
-    else:
-        do_sync(args)
+    elif args.catalog:
+        state = args.state or DEFAULT_STATE
+        do_sync(args.catalog, args.config, state)
 
 
 def main():
