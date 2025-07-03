@@ -98,11 +98,12 @@ class TestOutbrainClient(unittest.TestCase):
             429, headers={"rate-limit-msec-left": "1500"}
         )
 
-        with self.assertRaises(Server429Error):
+        with self.assertRaises(Server429Error) as ob:
             self.client.make_request("GET", "http://rate-limit/")
 
         self.assertEqual(self.client._retry_after, 1.5)
         self.assertEqual(mock_send.call_count, 5)
+        self.assertEqual("Rate limit exceeded", str(ob.exception))
 
     @patch.object(time, "sleep", lambda s: None)
     @patch.object(SESSION, "send")

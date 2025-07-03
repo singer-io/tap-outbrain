@@ -70,7 +70,7 @@ class OutbrainClient:
                 except (TypeError, ValueError):
                     self._retry_after = RETRY_RATE_LIMIT_MS
                 self._retry_after /= 1000.0  # For miliseconds conversion to seconds
-                raise Server429Error()
+                raise Server429Error("Rate limit exceeded")
             elif resp.status_code >= 400:
                 LOGGER.error(
                     f"{method} {req.url} [{resp.status_code} – {resp.content!r}]"
