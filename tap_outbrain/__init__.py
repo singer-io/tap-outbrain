@@ -48,6 +48,13 @@ class StreamSelectionError(Exception):
     pass
 
 
+def get_abs_path(path):
+    """
+    Return full path for the current file
+    """
+    return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
+
+
 def request(url, access_token, params):
     headers = {'OB-TOKEN-V1': access_token}
     if 'user_agent' in CONFIG:
@@ -320,7 +327,8 @@ def do_sync(catalog: singer.Catalog, config: Dict, state):
 
     # Sync only for campaigns as Parent and campaign_performance as child
     if streams.Campaign.name in selected_streams:
-        with open(f"tap_outbrain/schemas/{streams.Campaign.name}.json") as f:
+        schema_path = get_abs_path(f"schemas/{streams.Campaign.name}.json")
+        with open(schema_path) as f:
             campaign = json.load(f)
         singer.write_schema(streams.Campaign.name,
                             campaign,
@@ -331,7 +339,8 @@ def do_sync(catalog: singer.Catalog, config: Dict, state):
         raise StreamSelectionError(msg)
 
     if streams.CampaignPerformance.name in selected_streams:
-        with open(f"tap_outbrain/schemas/{streams.CampaignPerformance.name}.json") as f:
+        schema_path = get_abs_path(f"schemas/{streams.CampaignPerformance.name}.json")
+        with open(schema_path) as f:
             campaign_performance = json.load(f)
         singer.write_schema(streams.CampaignPerformance.name,
                             campaign_performance,
