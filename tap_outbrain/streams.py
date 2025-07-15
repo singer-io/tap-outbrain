@@ -1,7 +1,7 @@
 class Campaign:
     name = "campaign"
     key_properties = ["id"]
-    replication_keys = "creationTime"
+    replication_keys = "lastModified"
     replication_method = "INCREMENTAL"
 
 
