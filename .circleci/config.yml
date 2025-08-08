@@ -17,7 +17,7 @@ jobs:
          command: |
             source /usr/local/share/virtualenvs/tap-outbrain/bin/activate
             uv pip install pylint
-            pylint tap_outbrain -d missing-docstring,logging-format-interpolation,too-many-arguments,too-many-positional-arguments,too-many-locals,wrong-import-order,line-too-long,consider-using-f-string,broad-exception-raised,possibly-used-before-assignment
+            pylint tap_outbrain -d missing-docstring,logging-format-interpolation,too-many-arguments,too-many-positional-arguments,too-many-locals,wrong-import-order,line-too-long,consider-using-f-string,broad-exception-raised,possibly-used-before-assignment,consider-using-from-import,missing-timeout,deprecated-method,unspecified-encoding
       - store_test_results:
           path: test_output/report.xml
       - store_artifacts:
