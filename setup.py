@@ -12,7 +12,7 @@ setup(name='tap-outbrain',
       py_modules=['tap_outbrain'],
       install_requires=[
           'singer-python==5.13.2',
-          'backoff==1.3.2',
+          'backoff==1.10.0',
           'requests==2.32.4',
           'python-dateutil==2.6.0'
       ],
