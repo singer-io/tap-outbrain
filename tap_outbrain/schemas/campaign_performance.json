@@ -6,7 +6,7 @@
     },
     "fromDate": {
       "type": ["null", "string"],
-      "format": "date"
+      "format": "date-time"
     },
     "impressions": {
       "type": ["null", "number"]
