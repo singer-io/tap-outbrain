@@ -1,4 +1,4 @@
-#pylint: disable=invalid-name
+# pylint: disable=invalid-name
 link = {
     'type': 'object',
     'properties': {
@@ -81,7 +81,6 @@ link = {
         }
     }
 }
-
 
 campaign = {
     'type': 'object',
@@ -214,7 +213,6 @@ campaign = {
     }
 }
 
-
 campaign_performance = {
     'type': 'object',
     'properties': {
@@ -336,4 +334,36 @@ link_performance = {
                             'Calculated as: (spend / conversions)')
         }
     }
+}
+
+marketer = {
+    'type': 'object',
+    'properties': {
+        'id': {
+            'type': 'number'
+        },
+        'name': {
+            'type': 'string'
+        },
+        'enabled': {
+            'type': 'boolean'
+        },
+        'currency': {
+            'type': 'string'
+        },
+        'creationTime': {
+            'type': 'string',
+            'format': 'date-time',
+        },
+        'lastModified': {
+            'type': 'string',
+            'format': 'date-time',
+        },
+        'blockedSites': {
+            'type': 'string'
+        },
+        'useFirstPartyCookie': {
+            'type': 'boolean'
+        },
+    },
 }
