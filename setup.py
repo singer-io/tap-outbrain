@@ -18,7 +18,7 @@ setup(name="tap-outbrain",
       ],
       extras_require = {
         "dev": [
-          "nose",
+          "pytest",
         ],
       },
       entry_points="""
