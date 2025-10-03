@@ -26,7 +26,7 @@ jobs:
           name: 'Unit Tests'
           command: |
             source /usr/local/share/virtualenvs/tap-outbrain/bin/activate
-            python -m unittest discover tests -v
+            pytest tests/ -v
 workflows:
   version: 2
   commit:
