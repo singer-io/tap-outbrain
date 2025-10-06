@@ -11,14 +11,10 @@ class CampaignPerformance:
     bookmark_properties = ["fromDate"]
     replication_keys = "fromDate"
     replication_method = "INCREMENTAL"
+    parent = "campaign"
 
 
 STREAMS = {
     "campaign": Campaign,
     "campaign_performance": CampaignPerformance,
-}
-
-
-SUB_STREAMS = {
-    'campaign': ['campaign_performance']
 }

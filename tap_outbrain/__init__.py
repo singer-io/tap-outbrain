@@ -275,11 +275,7 @@ def sync_campaign_page(state, access_token, account_id, campaign_page, selected_
     campaigns = [parse_campaign(campaign) for campaign
                  in campaign_page.get('campaigns', [])]
 
-    campaign_sub_streams = streams.SUB_STREAMS.get('campaign')
-    if (
-        streams.CampaignPerformance.name not in campaign_sub_streams
-        or streams.CampaignPerformance.name not in selected_streams
-    ):
+    if streams.CampaignPerformance.name not in selected_streams:
         LOGGER.info("Skipping sync for campaign performance")
         return
 
