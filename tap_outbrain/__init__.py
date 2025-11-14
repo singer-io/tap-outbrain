@@ -12,16 +12,17 @@ import sys
 import time
 import dateutil.parser
 
-import backoff
-import requests
 import singer
-import singer.requests
 from singer import utils
 
-import tap_outbrain.schemas as schemas
+from tap_outbrain.client import OutbrainClient
+from tap_outbrain.discover import discover
+from tap_outbrain import streams
+from typing import Dict
+from requests.auth import HTTPBasicAuth
+
 
 LOGGER = singer.get_logger()
-SESSION = requests.Session()
 
 BASE_URL = 'https://api.outbrain.com/amplify/v0.1'
 CONFIG = {}
@@ -42,38 +43,32 @@ MARKETERS_CAMPAIGNS_MAX_LIMIT = 50
 REPORTS_MARKETERS_PERIODIC_MAX_LIMIT = 100
 
 
-@backoff.on_exception(backoff.constant,
-                      (requests.exceptions.RequestException),
-                      jitter=backoff.random_jitter,
-                      max_tries=5,
-                      giveup=singer.requests.giveup_on_http_4xx_except_429,
-                      interval=30)
+class StreamSelectionError(Exception):
+    """Raised when required stream is not selected for sync."""
+    pass
+
+
+def get_abs_path(path):
+    """
+    Return full path for the current file
+    """
+    return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
+
+
 def request(url, access_token, params):
-    LOGGER.info("Making request: GET {} {}".format(url, params))
     headers = {'OB-TOKEN-V1': access_token}
     if 'user_agent' in CONFIG:
         headers['User-Agent'] = CONFIG['user_agent']
 
-    req = requests.Request('GET', url, headers=headers, params=params).prepare()
-    LOGGER.info("GET {}".format(req.url))
-    resp = SESSION.send(req)
-
-    if resp.status_code >= 400:
-        LOGGER.error("GET {} [{} - {}]".format(req.url, resp.status_code, resp.content))
-        resp.raise_for_status()
-
-    return resp
+    return OutbrainClient().make_request('GET', url, headers=headers, params=params)
 
 
 def generate_token(username, password):
     LOGGER.info("Generating new token using basic auth.")
+    auth = HTTPBasicAuth(username, password)
 
-    auth = requests.auth.HTTPBasicAuth(username, password)
-    response = requests.get('{}/login'.format(BASE_URL), auth=auth)
-    LOGGER.info("Got response code: {}".format(response.status_code))
-    response.raise_for_status()
-
-    return response.json().get('OB-TOKEN-V1')
+    resp = OutbrainClient().make_request('GET', f'{BASE_URL}/login', auth=auth)
+    return resp.json().get('OB-TOKEN-V1')
 
 
 def parse_datetime(date_time):
@@ -276,9 +271,13 @@ def get_campaign_pages(account_id, access_token):
         campaign_page.get('totalCount')))
 
 
-def sync_campaign_page(state, access_token, account_id, campaign_page):
+def sync_campaign_page(state, access_token, account_id, campaign_page, selected_streams):
     campaigns = [parse_campaign(campaign) for campaign
                  in campaign_page.get('campaigns', [])]
+
+    if streams.CampaignPerformance.name not in selected_streams:
+        LOGGER.info("Skipping sync for campaign performance")
+        return
 
     for campaign in campaigns:
         singer.write_record('campaigns', campaign,
@@ -287,55 +286,29 @@ def sync_campaign_page(state, access_token, account_id, campaign_page):
                                   campaign.get('id'))
 
 
-def sync_campaigns(state, access_token, account_id):
+def sync_campaigns(state, access_token, account_id, selected_streams):
     LOGGER.info('Syncing campaigns.')
 
     for campaign_page in get_campaign_pages(account_id, access_token):
-        sync_campaign_page(state, access_token, account_id, campaign_page)
+        sync_campaign_page(state, access_token, account_id, campaign_page, selected_streams)
 
     LOGGER.info('Done!')
 
+def do_discover():
+    LOGGER.info("Starting discovery")
+    catalog = discover()
+    json.dump(catalog.to_dict(), sys.stdout, indent=2)
+    LOGGER.info("Finished discover")
 
-def do_sync(args):
+def do_sync(catalog: singer.Catalog, config: Dict, state):
     #pylint: disable=global-statement
     global DEFAULT_START_DATE
-    state = DEFAULT_STATE
 
-    with open(args.config) as config_file:
-        config = json.load(config_file)
-        CONFIG.update(config)
+    CONFIG.update(config)
 
-    missing_keys = []
-    if 'username' not in config:
-        missing_keys.append('username')
-    else:
-        username = config['username']
+    DEFAULT_START_DATE = config.get('start_date')[:10]
 
-    if 'password' not in config:
-        missing_keys.append('password')
-    else:
-        password = config['password']
-
-    if 'account_id' not in config:
-        missing_keys.append('account_id')
-    else:
-        account_id = config['account_id']
-
-    if 'start_date' not in config:
-        missing_keys.append('start_date')
-    else:
-        # only want the date
-        DEFAULT_START_DATE = config['start_date'][:10]
-
-    if missing_keys:
-        LOGGER.fatal("Missing {}.".format(", ".join(missing_keys)))
-        raise RuntimeError
-
-    access_token = config.get('access_token')
-
-    if access_token is None:
-        access_token = generate_token(username, password)
-
+    access_token = config.get('access_token') or generate_token(config.get('username'), config.get('password'))
     if access_token is None:
         LOGGER.fatal("Failed to generate a new access token.")
         raise RuntimeError
@@ -343,29 +316,49 @@ def do_sync(args):
     # NEVER RAISE THIS ABOVE DEBUG!
     LOGGER.debug('Using access token `{}`'.format(access_token))
 
+    selected_streams = []
+    for stream in catalog.get_selected_streams(state):
+        selected_streams.append(stream.stream)
+    LOGGER.info("selected_streams: {}".format(selected_streams))
 
-    singer.write_schema('campaigns',
-                        schemas.campaign,
-                        key_properties=["id"])
-    singer.write_schema('campaign_performance',
-                        schemas.campaign_performance,
-                        key_properties=["campaignId", "fromDate"],
-                        bookmark_properties=["fromDate"])
+    # Sync only for campaigns as Parent and campaign_performance as child
+    if streams.Campaign.name in selected_streams:
+        schema_path = get_abs_path(f"schemas/{streams.Campaign.name}.json")
+        with open(schema_path) as f:
+            campaign = json.load(f)
+        singer.write_schema(streams.Campaign.name,
+                            campaign,
+                            key_properties=streams.Campaign.key_properties)
+    else:
+        msg = "Stream campaign is not selected for sync"
+        LOGGER.error(msg)
+        raise StreamSelectionError(msg)
 
-    sync_campaigns(state, access_token, account_id)
+    if streams.CampaignPerformance.name in selected_streams:
+        schema_path = get_abs_path(f"schemas/{streams.CampaignPerformance.name}.json")
+        with open(schema_path) as f:
+            campaign_performance = json.load(f)
+        singer.write_schema(streams.CampaignPerformance.name,
+                            campaign_performance,
+                            key_properties=streams.CampaignPerformance.key_properties,
+                            bookmark_properties=streams.CampaignPerformance.bookmark_properties)
+
+    sync_campaigns(state, access_token, config.get('account_id'), selected_streams)
 
 
 def main_impl():
-    parser = argparse.ArgumentParser()
+    args = singer.utils.parse_args(
+        required_config_keys=[
+            'account_id',
+            'username',
+            'password',
+            'start_date'])
 
-    parser.add_argument(
-        '-c', '--config', help='Config file', required=True)
-    parser.add_argument(
-        '-s', '--state', help='State file')
-
-    args = parser.parse_args()
-
-    do_sync(args)
+    if args.discover:
+        do_discover()
+    elif args.catalog:
+        state = args.state or DEFAULT_STATE
+        do_sync(args.catalog, args.config, state)
 
 
 def main():
