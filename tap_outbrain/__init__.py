@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-from decimal import Decimal
-
 import argparse
 import base64
 import copy

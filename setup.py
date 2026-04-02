@@ -12,10 +12,10 @@ setup(name="tap-outbrain",
       classifiers=["Programming Language :: Python :: 3 :: Only"],
       py_modules=["tap_outbrain"],
       install_requires=[
-          "singer-python==6.1.1",
+          "singer-python==6.8.0",
           "backoff==2.2.1",
-          "requests==2.32.4",
-          "python-dateutil==2.9.0"
+          "requests==2.33.0",
+          "python-dateutil==2.9.0.post0"
       ],
       extras_require = {
         "dev": [
@@ -26,7 +26,7 @@ setup(name="tap-outbrain",
           [console_scripts]
           tap-outbrain=tap_outbrain:main
       """,
-      packages=["tap_outbrain"],
+      packages=find_packages(),
       include_package_data=True,
       package_data={
           "tap_outbrain": ["schemas/*.json"],
