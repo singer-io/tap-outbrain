@@ -25,8 +25,10 @@ class OutbrainAutomaticFieldsTest(OutbrainBaseTest):
         stream = next(s for s in catalog.streams if s.tap_stream_id == stream_name)
         mdata_map = metadata.to_map(stream.metadata)
         pk = set(metadata.get(mdata_map, (), "table-key-properties") or [])
-        # replication keys: fromDate is both a key AND replication key
-        rk = set(stream.key_properties or [])
+        # Replication keys are exposed via Singer metadata (valid-replication-keys).
+        # The value may be a bare string or a list, so normalise to a set.
+        rk_val = metadata.get(mdata_map, (), "valid-replication-keys") or []
+        rk = set([rk_val] if isinstance(rk_val, str) else rk_val)
         return pk | rk
 
     def test_campaign_automatic_fields_are_correct(self):
@@ -90,7 +92,7 @@ class OutbrainAutomaticFieldsTest(OutbrainBaseTest):
         """The primary key 'id' must be present in every campaign record."""
         campaigns = [self.make_campaign_record("c001"), self.make_campaign_record("c002")]
         captured, _ = self._run_mock_sync(campaigns=campaigns)
-        records = captured["records"].get("campaigns", [])
+        records = captured["records"].get("campaign", [])
         self.assertGreater(len(records), 0, "No campaign records emitted")
         for record in records:
             with self.subTest(record_id=record.get("id")):

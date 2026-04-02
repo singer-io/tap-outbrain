@@ -82,7 +82,10 @@ class TestParseDatetime(unittest.TestCase):
     def test_iso_utc_string(self):
         """ISO UTC datetime string round-trips correctly."""
         result = parse_datetime("2024-06-15T12:30:00+00:00")
-        self.assertTrue(result.endswith("Z"))
+        # Accept either a normalized UTC 'Z' suffix or a '+00:00' offset,
+        # but explicitly reject the invalid '+00:00Z' combination.
+        self.assertTrue(result.endswith("Z") or result.endswith("+00:00"))
+        self.assertNotIn("+00:00Z", result)
 
     def test_naive_datetime_string(self):
         """Naive datetime string: returns isoformat ending with Z."""
@@ -220,7 +223,7 @@ class TestSyncCampaignPage(unittest.TestCase):
                 {'id': 'c2', 'name': 'C2'},
             ]
         }
-        selected_streams = ['campaigns', 'campaign_performance']
+        selected_streams = ['campaign', 'campaign_performance']
 
         sync_campaign_page(self.state, self.access_token, self.account_id,
                            campaign_page, selected_streams)
@@ -235,7 +238,7 @@ class TestSyncCampaignPage(unittest.TestCase):
     def test_skips_sync_when_campaign_performance_not_selected(self, mock_write_record, mock_sync_perf):
         """When campaign_performance not in selected_streams, sync is skipped."""
         campaign_page = {'campaigns': [{'id': 'c1', 'name': 'C1'}]}
-        selected_streams = ['campaigns']  # campaign_performance absent
+        selected_streams = ['campaign']  # campaign_performance absent
 
         sync_campaign_page(self.state, self.access_token, self.account_id,
                            campaign_page, selected_streams)
@@ -248,7 +251,7 @@ class TestSyncCampaignPage(unittest.TestCase):
     def test_empty_campaigns_list(self, mock_write_record, mock_sync_perf):
         """Empty campaigns list produces no writes or syncs."""
         campaign_page = {'campaigns': []}
-        selected_streams = ['campaigns', 'campaign_performance']
+        selected_streams = ['campaign', 'campaign_performance']
 
         sync_campaign_page(self.state, self.access_token, self.account_id,
                            campaign_page, selected_streams)

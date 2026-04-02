@@ -66,7 +66,7 @@ class OutbrainAllFieldsTest(OutbrainBaseTest):
         """Every campaign record must contain all fields defined in campaign.json."""
         campaigns = [self.make_campaign_record("c001")]
         captured, _ = self._run_mock_sync(campaigns=campaigns)
-        records = captured["records"].get("campaigns", [])
+        records = captured["records"].get("campaign", [])
         self.assertGreater(len(records), 0, "No campaign records emitted")
         schema_fields = set(self._load_schema("campaign").get("properties", {}).keys())
         for record in records:
@@ -95,7 +95,7 @@ class OutbrainAllFieldsTest(OutbrainBaseTest):
         """Every campaign record contains non-null primary key 'id'."""
         campaigns = [self.make_campaign_record("c001"), self.make_campaign_record("c002")]
         captured, _ = self._run_mock_sync(campaigns=campaigns)
-        records = captured["records"].get("campaigns", [])
+        records = captured["records"].get("campaign", [])
         self.assertGreater(len(records), 0)
         for record in records:
             with self.subTest(record_id=record.get("id")):
@@ -124,7 +124,7 @@ class OutbrainAllFieldsTest(OutbrainBaseTest):
         # MARKETERS_CAMPAIGNS_MAX_LIMIT = 50; use 55 to force 2-page fetch
         campaigns = [self.make_campaign_record(f"c{i:03d}") for i in range(55)]
         captured, _ = self._run_mock_sync(campaigns=campaigns)
-        records = captured["records"].get("campaigns", [])
+        records = captured["records"].get("campaign", [])
         self.assertEqual(len(records), 55)
 
     def test_campaign_ids_match_after_pagination(self):
@@ -132,5 +132,5 @@ class OutbrainAllFieldsTest(OutbrainBaseTest):
         campaign_ids = [f"c{i:03d}" for i in range(55)]
         campaigns = [self.make_campaign_record(cid) for cid in campaign_ids]
         captured, _ = self._run_mock_sync(campaigns=campaigns)
-        synced_ids = {r["id"] for r in captured["records"].get("campaigns", [])}
+        synced_ids = {r["id"] for r in captured["records"].get("campaign", [])}
         self.assertEqual(synced_ids, set(campaign_ids))

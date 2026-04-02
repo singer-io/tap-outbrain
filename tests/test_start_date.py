@@ -1,4 +1,4 @@
-﻿"""Mock integration tests — verify start-date behaviour for tap-outbrain."""
+"""Mock integration tests — verify start-date behaviour for tap-outbrain."""
 import datetime
 
 try:
