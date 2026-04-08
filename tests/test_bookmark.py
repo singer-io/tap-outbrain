@@ -1,4 +1,4 @@
-﻿"""Live integration tests - verify bookmark / state behaviour for tap-outbrain.
+"""Live integration tests - verify bookmark / state behaviour for tap-outbrain.
 
 tap-outbrain uses `campaign_performance` as its only INCREMENTAL stream.
 Bookmarks are stored in state as:
@@ -8,10 +8,7 @@ import datetime
 
 from singer import metadata as singer_metadata
 
-try:
-    from base import OutbrainBaseTest
-except ImportError:
-    from tests.base import OutbrainBaseTest
+from base import OutbrainBaseTest
 
 from tap_outbrain.discover import discover
 from tap_outbrain import get_date_ranges
@@ -64,8 +61,6 @@ class OutbrainBookmarkTest(OutbrainBaseTest):
         """With 0 campaigns, no campaign-level bookmarks are written."""
         _, final_state = self._run_mock_sync(campaigns=[])
         self.assertEqual(final_state["campaign_performance"], {})
-
-
 
     def test_sync_completes_without_raising(self):
         """do_sync with mock credentials does not raise any exception."""

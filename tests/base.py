@@ -163,10 +163,27 @@ class OutbrainBaseTest(unittest.TestCase):
         return record
 
     def _collect_periodic_params(self, config=None, campaigns=None, initial_state=None):
-        """Run a mock sync and return every params dict sent to /periodic requests.
+        """Run a mock sync and collect every ``params`` dict sent to /periodic requests.
+
+        Test strategy
+        -------------
+        The outer-scope list ``periodic_params`` is captured by the inner
+        ``fake_request`` closure via Python's standard closure mechanism.
+        Closures hold a reference to mutable objects in the enclosing scope, so
+        every ``periodic_params.append(...)`` inside ``fake_request`` updates
+        the same list that is ultimately returned to callers — there is no
+        inconsistency or hidden shared state between test runs because each
+        invocation of ``_collect_periodic_params`` allocates a fresh
+        ``periodic_params = []`` list.
+
+        The inner ``fake_request``:
+          * handles ``/campaigns`` requests for paginated campaign fetching;
+          * handles ``/periodic`` requests (the performance sink) and records
+            the full ``params`` dict so callers can assert on ``from``, ``to``,
+            ``campaignId``, etc.
 
         Useful for start_date and bookmark tests that need to inspect the
-        from_date / to_date values the tap actually uses in API calls.
+        ``from_date`` / ``to_date`` window the tap computes for each API call.
         """
 
         run_config = config or self.config
@@ -175,6 +192,8 @@ class OutbrainBaseTest(unittest.TestCase):
         periodic_params = []
 
         def fake_request(url, access_token, params):
+            # ``periodic_params`` is captured from the outer scope by reference;
+            # appending here is safe and has no side-effects outside this call.
             resp = MagicMock()
             if "/campaigns" in url:
                 offset = params.get("offset", 0)
@@ -214,7 +233,30 @@ class OutbrainBaseTest(unittest.TestCase):
 
     def _run_mock_sync(self, campaigns=None, perf_records_by_campaign=None,
                        config=None, state=None):
-        """Run do_sync with a fully mocked HTTP layer.
+        """Run do_sync with a fully mocked HTTP layer and capture Singer output.
+
+        Test strategy
+        -------------
+        All outbound HTTP calls are intercepted by ``fake_request``.  Singer
+        output functions (``write_schema``, ``write_record``, ``write_state``)
+        are replaced with lightweight capture helpers that accumulate emitted
+        messages into ``captured``.  This lets integration tests make
+        assertions about:
+
+        * which SCHEMA messages were emitted (``captured["schemas"]``);
+        * which RECORD messages were emitted (``captured["records"]``);
+        * how the state evolved after each sync cycle (``captured["states"]``).
+
+        The ``fake_request`` inner function handles two URL patterns:
+          * ``/campaigns`` - returns paginated campaign fixtures so that the
+            tap's pagination logic can be exercised without a live API;
+          * ``/periodic``  - returns performance fixtures keyed by
+            ``campaign_id``; a minimal auto-generated record is used when no
+            fixture is provided for a campaign (prevents ``IndexError`` inside
+            ``sync_performance``).
+
+        Each invocation allocates independent ``captured`` and ``final_state``
+        objects, so tests are fully isolated from one another.
 
         Parameters
         ----------

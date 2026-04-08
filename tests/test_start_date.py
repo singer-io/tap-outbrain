@@ -1,10 +1,7 @@
 """Mock integration tests — verify start-date behaviour for tap-outbrain."""
 import datetime
 
-try:
-    from base import OutbrainBaseTest
-except ImportError:
-    from tests.base import OutbrainBaseTest
+from base import OutbrainBaseTest
 
 import tap_outbrain
 from tap_outbrain import get_date_ranges

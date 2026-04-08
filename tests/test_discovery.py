@@ -7,10 +7,7 @@ valid in both live and mock environments.
 
 from singer import metadata
 
-try:
-    from base import OutbrainBaseTest
-except ImportError:
-    from tests.base import OutbrainBaseTest
+from base import OutbrainBaseTest
 
 from tap_outbrain.discover import discover
 
