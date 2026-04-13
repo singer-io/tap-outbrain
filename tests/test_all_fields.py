@@ -1,6 +1,6 @@
 """Mock integration tests — verify all schema fields appear in synced records."""
 
-from base import OutbrainBaseTest
+from .base import OutbrainBaseTest
 
 
 class OutbrainAllFieldsTest(OutbrainBaseTest):

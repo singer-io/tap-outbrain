@@ -4,7 +4,7 @@ fields are always present in synced records.
 
 from singer import metadata
 
-from base import OutbrainBaseTest
+from .base import OutbrainBaseTest
 
 from tap_outbrain.discover import discover
 

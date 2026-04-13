@@ -191,9 +191,19 @@ class OutbrainBaseTest(unittest.TestCase):
         state = copy.deepcopy(initial_state) if initial_state else {"campaign_performance": {}}
         periodic_params = []
 
+        # WHY fake_request is defined here:
+        # tap_outbrain.request() is the single HTTP gateway used by the tap.
+        # By patching it with this inner function we intercept every outbound
+        # call without spawning a real HTTP connection.  Defining it inline
+        # (rather than as a class-level helper) lets it close over the local
+        # test fixtures (``mock_campaigns``, ``periodic_params``) without
+        # having to pass them as arguments, keeping the patch site clean.
+        #
+        # No inconsistency risk: ``periodic_params`` is freshly allocated on
+        # every call to ``_collect_periodic_params``; the closure holds a
+        # reference to *that* list only, so repeated test calls never share
+        # state.
         def fake_request(url, access_token, params):
-            # ``periodic_params`` is captured from the outer scope by reference;
-            # appending here is safe and has no side-effects outside this call.
             resp = MagicMock()
             if "/campaigns" in url:
                 offset = params.get("offset", 0)
@@ -287,6 +297,20 @@ class OutbrainBaseTest(unittest.TestCase):
 
         captured = {"schemas": {}, "records": {}, "states": []}
 
+        # WHY fake_request is defined here:
+        # tap_outbrain.request() is the tap's sole HTTP gateway.  Replacing it
+        # with this closure lets us control exactly what each endpoint returns
+        # without any real network calls.  The function is defined locally so
+        # it can close over ``mock_campaigns``, ``perf_map``, and ``captured``
+        # directly, which avoids threading those fixtures through additional
+        # arguments and keeps the unittest.mock.patch() call site simple.
+        #
+        # No inconsistency risk: every call to ``_run_mock_sync`` allocates
+        # its own fresh ``captured``, ``final_state``, ``mock_campaigns``, and
+        # ``perf_map`` objects.  The closure captures references to *those*
+        # objects only; no mutable state is shared across test invocations, so
+        # parallel or sequential test execution cannot produce cross-test
+        # pollution.
         def fake_request(url, access_token, params):
             resp = MagicMock()
             if "/campaigns" in url:

@@ -8,7 +8,7 @@ import datetime
 
 from singer import metadata as singer_metadata
 
-from base import OutbrainBaseTest
+from .base import OutbrainBaseTest
 
 from tap_outbrain.discover import discover
 from tap_outbrain import get_date_ranges

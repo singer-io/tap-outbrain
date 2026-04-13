@@ -191,7 +191,7 @@ def sync_performance(state, access_token, account_id, table_name, state_sub_id,
             access_token,
             params).json()
         if REPORTS_MARKETERS_PERIODIC_MAX_LIMIT < response.get('totalResults'):
-            LOGGER.warn('More performance data (`{}`) than the tap can currently retrieve (`{}`)'.format(
+            LOGGER.warning('More performance data (`{}`) than the tap can currently retrieve (`{}`)'.format(
                 response.get('totalResults'), REPORTS_MARKETERS_PERIODIC_MAX_LIMIT))
         else:
             LOGGER.info('Syncing `{}` rows of performance data for campaign `{}`. Requested `{}`.'.format(

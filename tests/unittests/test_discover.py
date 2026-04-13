@@ -150,7 +150,6 @@ class TestDiscover(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             discover()
 
-
     @patch('tap_outbrain.discover.get_schemas')
     def test_discover_logs_and_reraises_schema_error(self, mock_get_schemas):
         """When Schema.from_dict fails, discover() re-raises the exception."""
