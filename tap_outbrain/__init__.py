@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-from decimal import Decimal
-
 import argparse
 import base64
 import copy
@@ -73,8 +71,10 @@ def generate_token(username, password):
 
 def parse_datetime(date_time):
     parsed_datetime = dateutil.parser.parse(date_time)
-
-    # the assumption is that the timestamp comes in in UTC
+    # Normalize tz-aware datetimes to UTC before appending 'Z', so we never
+    # produce the invalid '+00:00Z' double-encoding.
+    if parsed_datetime.tzinfo is not None:
+        parsed_datetime = parsed_datetime.astimezone(datetime.timezone.utc).replace(tzinfo=None)
     return parsed_datetime.isoformat('T') + 'Z'
 
 
@@ -191,7 +191,7 @@ def sync_performance(state, access_token, account_id, table_name, state_sub_id,
             access_token,
             params).json()
         if REPORTS_MARKETERS_PERIODIC_MAX_LIMIT < response.get('totalResults'):
-            LOGGER.warn('More performance data (`{}`) than the tap can currently retrieve (`{}`)'.format(
+            LOGGER.warning('More performance data (`{}`) than the tap can currently retrieve (`{}`)'.format(
                 response.get('totalResults'), REPORTS_MARKETERS_PERIODIC_MAX_LIMIT))
         else:
             LOGGER.info('Syncing `{}` rows of performance data for campaign `{}`. Requested `{}`.'.format(
@@ -280,7 +280,7 @@ def sync_campaign_page(state, access_token, account_id, campaign_page, selected_
         return
 
     for campaign in campaigns:
-        singer.write_record('campaigns', campaign,
+        singer.write_record('campaign', campaign,
                             time_extracted=utils.now())
         sync_campaign_performance(state, access_token, account_id,
                                   campaign.get('id'))
