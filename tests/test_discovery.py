@@ -15,6 +15,10 @@ from tap_outbrain.discover import discover
 class OutbrainDiscoveryTest(OutbrainBaseTest):
     """Verify discover() returns the correct catalog without any API calls."""
 
+    @staticmethod
+    def name():
+        return "tap_outbrain_discovery_test"
+
     def _catalog(self):
         return discover()
 
@@ -57,6 +61,7 @@ class OutbrainDiscoveryTest(OutbrainBaseTest):
                     set(stream.key_properties or []),
                     expected[stream.tap_stream_id],
                 )
+
 
     def test_discovery_schema_has_properties(self):
         """Every stream schema must expose at least one property."""

@@ -12,6 +12,10 @@ from tap_outbrain.discover import discover
 class OutbrainAutomaticFieldsTest(OutbrainBaseTest):
     """Primary-key and replication-key fields must always be replicated."""
 
+    @staticmethod
+    def name():
+        return "tap_outbrain_automatic_fields_test"
+
     def _get_catalog(self):
         return self._make_selected_catalog()
 

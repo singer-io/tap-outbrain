@@ -10,6 +10,10 @@ from tap_outbrain import get_date_ranges
 class OutbrainStartDateTest(OutbrainBaseTest):
     """Verify that start_date drives the initial sync window correctly."""
 
+    @staticmethod
+    def name():
+        return "tap_outbrain_start_date_test"
+
     def test_start_date_sets_initial_from_date(self):
         """First /periodic request uses start_date - 2 days as from_date."""
         config = self.get_mock_config(start_date="2024-03-01T00:00:00Z")

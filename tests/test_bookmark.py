@@ -17,6 +17,10 @@ from tap_outbrain import get_date_ranges
 class OutbrainBookmarkTest(OutbrainBaseTest):
     """Verify state/bookmark behaviour with fully mocked HTTP responses."""
 
+    @staticmethod
+    def name():
+        return "tap_outbrain_bookmark_test"
+
     def test_state_written_after_sync(self):
         """write_state is called at least once when a campaign has performance data."""
         campaigns = [self.make_campaign_record("c001")]

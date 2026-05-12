@@ -1,4 +1,3 @@
-"""Base class for tap-outbrain mock integration tests."""
 import copy
 import json
 import os
@@ -9,160 +8,200 @@ import tap_outbrain
 from tap_outbrain.discover import discover
 
 
-class OutbrainBaseTest(unittest.TestCase):
-    """Shared helpers and metadata for all tap-outbrain mock integration tests."""
+def _is_mock_mode() -> bool:
+    """Return True when tests should run against mocked HTTP responses.
 
-    PRIMARY_KEYS = "primary_keys"
-    REPLICATION_METHOD = "replication_method"
-    REPLICATION_KEYS = "replication_keys"
-    OBEYS_START_DATE = "obeys_start_date"
-    PARENT = "parent"
+    Override with the INTEGRATION_TEST_MODE environment variable:
+      live  — always use tap-tester (requires TAP_OUTBRAIN_API_CREDS)
+      mock  — always use mock HTTP stubs (no account needed)
+      auto  — (default) live if TAP_OUTBRAIN_API_CREDS is set, else mock
+    """
+    mode = os.environ.get("INTEGRATION_TEST_MODE", "auto").lower()
+    if mode == "live":
+        return False
+    if mode == "mock":
+        return True
+    return not bool(os.environ.get("TAP_OUTBRAIN_API_CREDS"))
 
-    INCREMENTAL = "INCREMENTAL"
-    FULL_TABLE = "FULL_TABLE"
-    DEFAULT_START_DATE = "2024-01-01"
 
-    @staticmethod
-    def _tap_root():
-        """Absolute path to the tap-outbrain package root."""
-        return os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..", "tap_outbrain")
-        )
+if _is_mock_mode():
+    from mock_base import MockOutbrainBaseTest as OutbrainBaseTest  # noqa: F401
+else:
+    from tap_tester import connections, menagerie, runner  # noqa: F401
+    from tap_tester.base_suite_tests.base_case import BaseCase
 
-    @classmethod
-    def _load_schema(cls, stream_name: str) -> dict:
-        """Load a schema JSON from the tap_outbrain/schemas/ directory."""
-        path = os.path.join(cls._tap_root(), "schemas", f"{stream_name}.json")
-        with open(path) as fh:
-            return json.load(fh)
+    class OutbrainBaseTest(BaseCase):  # type: ignore[no-redef]
+        """Setup expectations for test sub classes.
 
-    @staticmethod
-    def get_mock_config(start_date=None) -> dict:
-        """Return a config dict with fake credentials — no real API calls.
-
-        access_token is provided so do_sync skips generate_token() entirely.
+        Metadata describing streams. A bunch of shared methods that are used
+        in tap-tester tests. Shared tap-specific methods (as needed).
         """
-        return {
-            "account_id": "test_account_001",
-            "username": "test@example.com",
-            "password": "test_password",
-            "access_token": "mock_access_token",
-            "start_date": start_date or "2024-01-01T00:00:00Z",
-        }
+        start_date = "2024-01-01T00:00:00Z"
 
-    def setUp(self):
-        self.config = self.get_mock_config()
+        @staticmethod
+        def tap_name():
+            return "tap-outbrain"
 
-    @classmethod
-    def expected_metadata(cls) -> dict:
-        """Expected streams and their key metadata attributes."""
-        return {
-            "campaign": {
-                cls.PRIMARY_KEYS: {"id"},
-                cls.REPLICATION_METHOD: cls.FULL_TABLE,
-                cls.REPLICATION_KEYS: set(),
-                cls.OBEYS_START_DATE: False,
-            },
-            "campaign_performance": {
-                cls.PRIMARY_KEYS: {"campaignId", "fromDate"},
-                cls.REPLICATION_METHOD: cls.INCREMENTAL,
-                cls.REPLICATION_KEYS: {"fromDate"},
-                cls.OBEYS_START_DATE: True,
-                cls.PARENT: "campaign",
-            },
-        }
+        @staticmethod
+        def get_type():
+            return "platform.outbrain"
 
-    @classmethod
-    def expected_stream_names(cls) -> set:
-        return set(cls.expected_metadata().keys())
+        def get_properties(self, original=True):
+            return {
+                "start_date": self.start_date,
+            }
 
-    @classmethod
-    def expected_primary_keys(cls) -> dict:
-        return {
-            s: meta[cls.PRIMARY_KEYS]
-            for s, meta in cls.expected_metadata().items()
-        }
+        def get_credentials(self):
+            api_creds = os.environ.get("TAP_OUTBRAIN_API_CREDS", "")
+            if not api_creds:
+                raise ValueError("TAP_OUTBRAIN_API_CREDS environment variable not set")
+            # Expected format: account_id:username:password
+            parts = api_creds.split(":")
+            if len(parts) != 3:
+                raise ValueError(
+                    "TAP_OUTBRAIN_API_CREDS must be formatted as account_id:username:password"
+                )
+            return {
+                "account_id": parts[0],
+                "username": parts[1],
+                "password": parts[2],
+            }
 
-    @classmethod
-    def expected_replication_keys(cls) -> dict:
-        return {
-            s: meta[cls.REPLICATION_KEYS]
-            for s, meta in cls.expected_metadata().items()
-        }
+        @classmethod
+        def expected_metadata(cls):
+            """The expected streams and metadata about the streams."""
+            return {
+                "campaign": {
+                    cls.PRIMARY_KEYS: {"id"},
+                    cls.REPLICATION_METHOD: cls.FULL_TABLE,
+                    cls.REPLICATION_KEYS: set(),
+                },
+                "campaign_performance": {
+                    cls.PRIMARY_KEYS: {"campaignId", "fromDate"},
+                    cls.REPLICATION_METHOD: cls.INCREMENTAL,
+                    cls.REPLICATION_KEYS: {"fromDate"},
+                },
+            }
 
-    @classmethod
-    def expected_replication_method(cls) -> dict:
-        return {
-            s: meta[cls.REPLICATION_METHOD]
-            for s, meta in cls.expected_metadata().items()
-        }
+        @classmethod
+        def expected_stream_names(cls):
+            return set(cls.expected_metadata().keys())
 
-    @staticmethod
-    def _make_selected_catalog():
-        """Return a discover() catalog with all streams marked as selected.
+        @classmethod
+        def expected_primary_keys(cls):
+            return {
+                stream: meta[cls.PRIMARY_KEYS]
+                for stream, meta in cls.expected_metadata().items()
+            }
 
-        Singer's ``catalog.get_selected_streams()`` only yields streams whose
-        root metadata entry (breadcrumb == ()) contains ``selected: True``.
-        """
-        catalog = discover()
-        for entry in catalog.streams:
-            for m in entry.metadata:
-                if not m.get("breadcrumb"):
-                    m["metadata"]["selected"] = True
-        return catalog
+        @classmethod
+        def expected_replication_keys(cls):
+            return {
+                stream: meta[cls.REPLICATION_KEYS]
+                for stream, meta in cls.expected_metadata().items()
+            }
 
-    @staticmethod
-    def make_campaign_record(campaign_id, **overrides):
-        """Return a campaign dict as returned by the Outbrain /campaigns endpoint."""
-        record = {
-            "id": campaign_id,
-            "name": f"Campaign {campaign_id}",
-            "campaignOnAir": True,
-            "onAirReason": None,
-            "enabled": True,
-            "budget": {
-                "id": f"budget_{campaign_id}",
-                "name": f"Budget {campaign_id}",
-                "shared": False,
-                "amount": 1000.0,
-                "currency": "USD",
-                "amountRemaining": 500.0,
-                "amountSpent": 500.0,
-                # parse_campaign() calls parse_datetime() on these — must be ISO strings
-                "creationTime": "2024-01-01T00:00:00+00:00",
-                "lastModified": "2024-01-02T00:00:00+00:00",
-                "startDate": "2024-01-01",
-                "endDate": None,
-                "runForever": True,
-                "type": "daily",
-                "pacing": "automatic",
-                "dailyTarget": 100.0,
-                "maximumAmount": None,
-            },
-            "cpc": 0.5,
-        }
-        record.update(overrides)
-        return record
+        @classmethod
+        def expected_replication_method(cls):
+            return {
+                stream: meta[cls.REPLICATION_METHOD]
+                for stream, meta in cls.expected_metadata().items()
+            }
 
-    @staticmethod
-    def make_performance_record(campaign_id, from_date, **overrides):
-        """Return a flat performance record dict (pre-API-response-transform format)."""
-        record = {
-            "campaignId": campaign_id,
-            "fromDate": from_date,
-            "impressions": 1000,
-            "clicks": 50,
-            "ctr": 0.05,
-            "spend": 25.0,
-            "ecpc": 0.5,
-            "conversions": 5,
-            "conversionRate": 0.1,
-            "cpa": 5.0,
-        }
-        record.update(overrides)
-        return record
+        @staticmethod
+        def _tap_root():
+            """Absolute path to the tap-outbrain package root."""
+            return os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "tap_outbrain")
+            )
 
-    def _collect_periodic_params(self, config=None, campaigns=None, initial_state=None):
+        @classmethod
+        def _load_schema(cls, stream_name: str) -> dict:
+            """Load a schema JSON from the tap_outbrain/schemas/ directory."""
+            path = os.path.join(cls._tap_root(), "schemas", f"{stream_name}.json")
+            with open(path) as fh:
+                return json.load(fh)
+
+        @staticmethod
+        def get_mock_config(start_date=None) -> dict:
+            """Return a config dict with fake credentials for testing."""
+            return {
+                "account_id": "test_account_001",
+                "username": "test@example.com",
+                "password": "test_password",
+                "access_token": "mock_access_token",
+                "start_date": start_date or "2024-01-01T00:00:00Z",
+            }
+
+        def setUp(self):
+            self.config = self.get_mock_config()
+
+        @staticmethod
+        def _make_selected_catalog():
+            """Return a discover() catalog with all streams marked as selected.
+
+            Singer's ``catalog.get_selected_streams()`` only yields streams whose
+            root metadata entry (breadcrumb == ()) contains ``selected: True``.
+            """
+            catalog = discover()
+            for entry in catalog.streams:
+                for m in entry.metadata:
+                    if not m.get("breadcrumb"):
+                        m["metadata"]["selected"] = True
+            return catalog
+
+        @staticmethod
+        def make_campaign_record(campaign_id, **overrides):
+            """Return a campaign dict as returned by the Outbrain /campaigns endpoint."""
+            record = {
+                "id": campaign_id,
+                "name": f"Campaign {campaign_id}",
+                "campaignOnAir": True,
+                "onAirReason": None,
+                "enabled": True,
+                "budget": {
+                    "id": f"budget_{campaign_id}",
+                    "name": f"Budget {campaign_id}",
+                    "shared": False,
+                    "amount": 1000.0,
+                    "currency": "USD",
+                    "amountRemaining": 500.0,
+                    "amountSpent": 500.0,
+                    # parse_campaign() calls parse_datetime() on these — must be ISO strings
+                    "creationTime": "2024-01-01T00:00:00+00:00",
+                    "lastModified": "2024-01-02T00:00:00+00:00",
+                    "startDate": "2024-01-01",
+                    "endDate": None,
+                    "runForever": True,
+                    "type": "daily",
+                    "pacing": "automatic",
+                    "dailyTarget": 100.0,
+                    "maximumAmount": None,
+                },
+                "cpc": 0.5,
+            }
+            record.update(overrides)
+            return record
+
+        @staticmethod
+        def make_performance_record(campaign_id, from_date, **overrides):
+            """Return a flat performance record dict (pre-API-response-transform format)."""
+            record = {
+                "campaignId": campaign_id,
+                "fromDate": from_date,
+                "impressions": 1000,
+                "clicks": 50,
+                "ctr": 0.05,
+                "spend": 25.0,
+                "ecpc": 0.5,
+                "conversions": 5,
+                "conversionRate": 0.1,
+                "cpa": 5.0,
+            }
+            record.update(overrides)
+            return record
+
+        def _collect_periodic_params(self, config=None, campaigns=None, initial_state=None):
         """Run a mock sync and collect every ``params`` dict sent to /periodic requests.
 
         Test strategy

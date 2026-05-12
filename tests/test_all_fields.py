@@ -6,6 +6,10 @@ from .base import OutbrainBaseTest
 class OutbrainAllFieldsTest(OutbrainBaseTest):
     """Verify Singer schema messages are correct and records contain expected fields."""
 
+    @staticmethod
+    def name():
+        return "tap_outbrain_all_fields_test"
+
     def test_sync_emits_schema_for_campaign_stream(self):
         """A SCHEMA message is emitted for the campaign stream."""
         captured, _ = self._run_mock_sync()
