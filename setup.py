@@ -2,7 +2,7 @@
 from setuptools import setup, find_packages
 
 setup(name="tap-outbrain",
-      version="1.1.0",
+      version="2.0.0",
       description="Singer.io tap for extracting data from the Outbrain API",
       author="Fishtown Analytics",
       url="http://singer.io",
@@ -11,7 +11,7 @@ setup(name="tap-outbrain",
       install_requires=[
           "singer-python==6.8.0",
           "backoff==2.2.1",
-          "requests==2.33.0",
+          "requests==2.34.2",
           "python-dateutil==2.9.0.post0"
       ],
       extras_require = {
