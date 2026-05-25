@@ -83,7 +83,7 @@ def parse_performance(result, extra_fields):
     metadata = result.get('metadata', {})
 
     to_return = {
-        'fromDate': metadata.get('fromDate'),
+        'fromDate': parse_datetime(metadata.get('fromDate')),
         'impressions': int(metrics.get('impressions', 0)),
         'clicks': int(metrics.get('clicks', 0)),
         'ctr': float(metrics.get('ctr', 0.0)),
