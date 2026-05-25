@@ -137,7 +137,7 @@ class TestParsePerformance(unittest.TestCase):
 
     def test_missing_metrics_default_to_zero(self):
         """Missing metrics default to 0."""
-        result = self._make_result()
+        result = self._make_result(metadata={'fromDate': '2024-01-01'})
         parsed = parse_performance(result, {})
         self.assertEqual(parsed['impressions'], 0)
         self.assertEqual(parsed['clicks'], 0)
@@ -145,7 +145,7 @@ class TestParsePerformance(unittest.TestCase):
 
     def test_extra_fields_merged(self):
         """extra_fields are merged into the output."""
-        result = self._make_result()
+        result = self._make_result(metadata={'fromDate': '2024-01-01'})
         parsed = parse_performance(result, {'campaignId': 'x', 'linkId': 'y'})
         self.assertEqual(parsed['campaignId'], 'x')
         self.assertEqual(parsed['linkId'], 'y')
