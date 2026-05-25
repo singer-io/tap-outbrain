@@ -2,10 +2,10 @@
   "type": "object",
   "properties": {
     "campaignId": {
-      "type": ["null", "string"]
+      "type": ["string"]
     },
     "fromDate": {
-      "type": ["null", "string"],
+      "type": ["string"],
       "format": "date-time"
     },
     "impressions": {
