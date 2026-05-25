@@ -1,7 +1,6 @@
 # Changelog
 
-## 2.0.0
-  * **Breaking:** Remove `null` from key property types to enforce NOT NULL constraints
+## 1.2.0
   * Fix `id` in `campaign` schema — key property must be non-nullable
   * Fix `campaignId` and `fromDate` in `campaign_performance` schema — key/bookmark properties must be non-nullable
   * Upgrade `requests` to `2.34.2`
