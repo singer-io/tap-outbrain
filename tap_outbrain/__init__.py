@@ -29,7 +29,7 @@ DEFAULT_STATE = {
     'campaign_performance': {}
 }
 
-DEFAULT_START_DATE = '2016-08-01'
+DEFAULT_START_DATE = '2016-08-01T00:00:00Z'
 
 # We can retrieve at most 2 campaigns per minute. We only have 5.5 hours
 # to run so that works out to about 660 (120 campaigns per hour * 5.5 =
@@ -82,8 +82,9 @@ def parse_performance(result, extra_fields):
     metrics = result.get('metrics', {})
     metadata = result.get('metadata', {})
 
+    raw_from_date = metadata.get('fromDate')
     to_return = {
-        'fromDate': parse_datetime(metadata.get('fromDate')),
+        'fromDate': parse_datetime(raw_from_date) if raw_from_date else None,
         'impressions': int(metrics.get('impressions', 0)),
         'clicks': int(metrics.get('clicks', 0)),
         'ctr': float(metrics.get('ctr', 0.0)),
@@ -154,10 +155,11 @@ def sync_performance(state, access_token, account_id, table_name, state_sub_id,
                                 {'campaignId': '000b...'}
     """
     # sync 2 days before last saved date, or DEFAULT_START_DATE
-    from_date = datetime.datetime.strptime(
+    # Bookmark is stored as 'YYYY-MM-DDT00:00:00Z'
+    from_date = dateutil.parser.parse(
         state.get(table_name, {})
-        .get(state_sub_id, DEFAULT_START_DATE),
-        '%Y-%m-%d').date() - datetime.timedelta(days=2)
+        .get(state_sub_id, DEFAULT_START_DATE)
+    ).date() - datetime.timedelta(days=2)
 
     to_date = datetime.date.today()
 
@@ -306,7 +308,7 @@ def do_sync(catalog: singer.Catalog, config: Dict, state):
 
     CONFIG.update(config)
 
-    DEFAULT_START_DATE = config.get('start_date')[:10]
+    DEFAULT_START_DATE = parse_datetime(config.get('start_date'))
 
     access_token = config.get('access_token') or generate_token(config.get('username'), config.get('password'))
     if access_token is None:

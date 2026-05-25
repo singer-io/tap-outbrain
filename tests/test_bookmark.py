@@ -41,7 +41,7 @@ class OutbrainBookmarkTest(OutbrainBaseTest):
             ]
         }
         _, final_state = self._run_mock_sync(campaigns=campaigns, perf_records_by_campaign=perf)
-        self.assertEqual(final_state["campaign_performance"]["c001"], "2024-05-15")
+        self.assertEqual(final_state["campaign_performance"]["c001"], "2024-05-15T00:00:00Z")
 
     def test_separate_bookmarks_per_campaign(self):
         """Each campaign has its own independent bookmark in state."""
@@ -54,8 +54,8 @@ class OutbrainBookmarkTest(OutbrainBaseTest):
             "c002": [self.make_performance_record("c002", "2024-04-15")],
         }
         _, final_state = self._run_mock_sync(campaigns=campaigns, perf_records_by_campaign=perf)
-        self.assertEqual(final_state["campaign_performance"]["c001"], "2024-03-01")
-        self.assertEqual(final_state["campaign_performance"]["c002"], "2024-04-15")
+        self.assertEqual(final_state["campaign_performance"]["c001"], "2024-03-01T00:00:00Z")
+        self.assertEqual(final_state["campaign_performance"]["c002"], "2024-04-15T00:00:00Z")
 
     def test_no_bookmark_written_for_no_campaigns(self):
         """With 0 campaigns, no campaign-level bookmarks are written."""

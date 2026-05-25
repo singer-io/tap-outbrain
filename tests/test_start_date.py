@@ -30,20 +30,22 @@ class OutbrainStartDateTest(OutbrainBaseTest):
         )
 
     def test_default_start_date_set_from_config(self):
-        """After do_sync, DEFAULT_START_DATE equals the YYYY-MM-DD part of start_date."""
+        """After do_sync, DEFAULT_START_DATE is the full date-time string of start_date."""
         config = self.get_mock_config(start_date="2024-05-15T00:00:00Z")
         self._run_mock_sync(config=config)
-        self.assertEqual(tap_outbrain.DEFAULT_START_DATE, "2024-05-15")
+        self.assertEqual(tap_outbrain.DEFAULT_START_DATE, "2024-05-15T00:00:00Z")
 
-    def test_start_date_sliced_to_date_only(self):
-        """DEFAULT_START_DATE never retains the time component of start_date."""
+    def test_start_date_stored_as_datetime(self):
+        """DEFAULT_START_DATE always stores in date-time format ending with 'Z'."""
         config = self.get_mock_config(start_date="2024-01-01T12:30:00Z")
         self._run_mock_sync(config=config)
         ds = tap_outbrain.DEFAULT_START_DATE
+        self.assertTrue(ds.endswith('Z'), f"DEFAULT_START_DATE '{ds}' does not end with 'Z'")
         try:
-            datetime.datetime.strptime(ds, "%Y-%m-%d")
+            import dateutil.parser
+            dateutil.parser.parse(ds)
         except ValueError:
-            self.fail(f"DEFAULT_START_DATE '{ds}' is not in YYYY-MM-DD format")
+            self.fail(f"DEFAULT_START_DATE '{ds}' is not a valid date-time string")
 
     def test_sync_completes_without_raising(self):
         """do_sync with mocked HTTP layer completes without raising."""
