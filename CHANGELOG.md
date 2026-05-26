@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.0
+  * Fix `fromDate` in `campaign_performance` — convert API date strings (`YYYY-MM-DD`) to `YYYY-MM-DDT00:00:00Z` to match `date-time` schema, preventing NOT NULL violations
+  * Upgrade `requests` to `2.34.2`
+
 ## 1.1.0
   * Upgrade Python to 3.12 in CircleCI [#30](https://github.com/singer-io/tap-outbrain/pull/30)
   * Upgrade `singer-python`, `requests` and `python-dateutil` to latest version

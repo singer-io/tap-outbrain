@@ -132,12 +132,12 @@ class TestParsePerformance(unittest.TestCase):
         self.assertEqual(parsed['clicks'], 5)
         self.assertAlmostEqual(parsed['ctr'], 0.05)
         self.assertAlmostEqual(parsed['spend'], 12.50)
-        self.assertEqual(parsed['fromDate'], '2024-01-01')
+        self.assertEqual(parsed['fromDate'], '2024-01-01T00:00:00Z')
         self.assertEqual(parsed['campaignId'], 'abc')
 
     def test_missing_metrics_default_to_zero(self):
         """Missing metrics default to 0."""
-        result = self._make_result()
+        result = self._make_result(metadata={'fromDate': '2024-01-01'})
         parsed = parse_performance(result, {})
         self.assertEqual(parsed['impressions'], 0)
         self.assertEqual(parsed['clicks'], 0)
@@ -145,7 +145,7 @@ class TestParsePerformance(unittest.TestCase):
 
     def test_extra_fields_merged(self):
         """extra_fields are merged into the output."""
-        result = self._make_result()
+        result = self._make_result(metadata={'fromDate': '2024-01-01'})
         parsed = parse_performance(result, {'campaignId': 'x', 'linkId': 'y'})
         self.assertEqual(parsed['campaignId'], 'x')
         self.assertEqual(parsed['linkId'], 'y')
@@ -154,7 +154,7 @@ class TestParsePerformance(unittest.TestCase):
         """fromDate sourced from metadata, not metrics."""
         result = self._make_result(metadata={'fromDate': '2024-06-01'})
         parsed = parse_performance(result, {})
-        self.assertEqual(parsed['fromDate'], '2024-06-01')
+        self.assertEqual(parsed['fromDate'], '2024-06-01T00:00:00Z')
 
 
 # ---------------------------------------------------------------------------
@@ -402,14 +402,14 @@ class TestDoSync(unittest.TestCase):
     @patch('tap_outbrain.sync_campaigns')
     @patch('singer.write_schema')
     def test_do_sync_sets_start_date(self, mock_write_schema, mock_sync):
-        """do_sync slices start_date to YYYY-MM-DD for DEFAULT_START_DATE."""
+        """do_sync stores start_date as a full date-time string in DEFAULT_START_DATE."""
         catalog = self._make_catalog(['campaign', 'campaign_performance'])
         config = self._make_config()
         config['start_date'] = '2024-06-15T00:00:00Z'
 
         do_sync(catalog, config, {'campaign_performance': {}})
 
-        self.assertEqual(tap_outbrain.DEFAULT_START_DATE, '2024-06-15')
+        self.assertEqual(tap_outbrain.DEFAULT_START_DATE, '2024-06-15T00:00:00Z')
 
     @patch('tap_outbrain.generate_token')
     @patch('tap_outbrain.sync_campaigns')
@@ -588,7 +588,7 @@ class TestSyncPerformance(unittest.TestCase):
             {'campaignId': 'c1'}, {'campaignId': 'c1'}
         )
 
-        self.assertEqual(state['campaign_performance']['c1'], '2024-02-10')
+        self.assertEqual(state['campaign_performance']['c1'], '2024-02-10T00:00:00Z')
 
     @patch('time.sleep')
     @patch('singer.write_state')
