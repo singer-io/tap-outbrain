@@ -260,12 +260,24 @@ def _get_annotated_schema(conn_id: _MockConn, stream_id: str) -> dict:
         return {"schema": {}, "metadata": []}
     for entry in conn_id.catalog.streams:
         if entry.tap_stream_id == stream_id or entry.stream == stream_id:
+            metadata = [
+                {"breadcrumb": list(m["breadcrumb"]), "metadata": m["metadata"]}
+                for m in entry.metadata
+            ]
+            if not any(item["breadcrumb"] == [] for item in metadata):
+                metadata.insert(
+                    0,
+                    {
+                        "breadcrumb": [],
+                        "metadata": {
+                            "selected": True,
+                            "table-key-properties": list(getattr(entry, "key_properties", []) or []),
+                        },
+                    },
+                )
             return {
                 "schema": entry.schema.to_dict(),
-                "metadata": [
-                    {"breadcrumb": list(m["breadcrumb"]), "metadata": m["metadata"]}
-                    for m in entry.metadata
-                ],
+                "metadata": metadata,
             }
     return {"schema": {}, "metadata": []}
 
@@ -386,6 +398,7 @@ class BaseCase(unittest.TestCase):
     """Minimal tap-tester BaseCase for mock mode test compatibility."""
 
     PRIMARY_KEYS = "primary_keys"
+    UNSUPPORTED_FIELDS = "unsupported-fields"
     REPLICATION_METHOD = "replication_method"
     REPLICATION_KEYS = "replication_keys"
     OBEYS_START_DATE = "obeys_start_date"
@@ -409,6 +422,15 @@ class BaseCase(unittest.TestCase):
 
     def assertCountEqual(self, *args, **kwargs):
         return super().assertCountEqual(*args, **self._strip_logging(kwargs))
+
+    def assertEqual(self, *args, **kwargs):
+        return super().assertEqual(*args, **self._strip_logging(kwargs))
+
+    def assertFalse(self, *args, **kwargs):
+        return super().assertFalse(*args, **self._strip_logging(kwargs))
+
+    def assertTrue(self, *args, **kwargs):
+        return super().assertTrue(*args, **self._strip_logging(kwargs))
 
     def assertGreater(self, *args, **kwargs):
         return super().assertGreater(*args, **self._strip_logging(kwargs))
@@ -508,6 +530,39 @@ class BaseCase(unittest.TestCase):
         if stream is None:
             return page_size
         return page_size[stream]
+
+    def expected_unsupported_fields(self, stream=None):
+        unsupported_fields = {
+            table: properties.get(self.UNSUPPORTED_FIELDS, [])
+            for table, properties in self.expected_metadata().items()
+        }
+        if stream is None:
+            return unsupported_fields
+        return unsupported_fields[stream]
+
+    def expected_start_date_behavior(self, stream=None):
+        respect_start_date = {
+            table: properties.get(self.RESPECTS_START_DATE, True)
+            for table, properties in self.expected_metadata().items()
+        }
+        if stream is None:
+            return respect_start_date
+        return respect_start_date[stream]
+
+    def get_bookmark_value(self, state, stream):
+        replication_method = self.expected_replication_method(stream)
+        stream_bookmark = state.get("bookmarks", {}).get(stream, {})
+        stream_replication_key = self.expected_replication_keys(stream)
+        if stream_bookmark and replication_method == self.INCREMENTAL:
+            assert len(stream_replication_key) == 1
+            return stream_bookmark.get(next(iter(stream_replication_key)))
+        return None
+
+    def get_bookmark_values(self, state, test_streams):
+        bookmark_values = {}
+        for stream in test_streams:
+            bookmark_values[stream] = self.get_bookmark_value(state, stream)
+        return bookmark_values
 
     def run_and_verify_check_mode(self, conn_id: _MockConn):
         """Run discovery and verify it succeeds."""

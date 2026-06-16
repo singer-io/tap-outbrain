@@ -82,6 +82,7 @@ class MockOutbrainBaseTest(BaseCase):
                 cls.REPLICATION_METHOD: cls.FULL_TABLE,
                 cls.REPLICATION_KEYS: set(),
                 cls.RESPECTS_START_DATE: False,
+                cls.API_LIMIT: 50,
             },
             "campaign_performance": {
                 cls.PRIMARY_KEYS: {"campaignId", "fromDate"},
@@ -89,6 +90,8 @@ class MockOutbrainBaseTest(BaseCase):
                 cls.REPLICATION_KEYS: {"fromDate"},
                 cls.RESPECTS_START_DATE: True,
                 cls.LOOK_BACK_WINDOW: timedelta(days=2),
+                cls.PARENT_STREAM: "campaign",
+                cls.API_LIMIT: 100,
             },
         }
 
