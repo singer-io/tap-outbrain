@@ -6,16 +6,14 @@ from tap_tester.base_suite_tests.start_date_test import StartDateTest as TT_Star
 class StartDateTest(TT_StartDateTest, OutbrainBaseTest):
     """Verify that the tap's start_date config controls how far back data is synced."""
 
-     # start_date_1: before all 3 mock records -> 3 records per incremental stream
+    # start_date_1: far enough in the past that the sync should return more records
     start_date_1 = "2021-01-01T00:00:00Z"
-    # start_date_2: between the 2nd (2024-01-15) and 3rd (2024-02-01) mock record
+    # start_date_2: more recent date so the sync should return fewer records
     start_date_2 = "2024-01-20T00:00:00Z"
 
-    
     @staticmethod
     def name():
         return "tap_outbrain_start_date_test"
-
 
     def streams_to_test(self):
         return {s for s, m in self.expected_replication_method().items()

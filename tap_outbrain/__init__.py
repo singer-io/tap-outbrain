@@ -209,17 +209,21 @@ def sync_performance(state, access_token, account_id, table_name, state_sub_id,
         LOGGER.info('Done in {} sec'.format(
             last_request_end.timestamp() - last_request_start.timestamp()))
 
+        results = response.get('results') or []
         performance = [
             parse_performance(result, extra_persist_fields)
-            for result in response.get('results')]
+            for result in results]
 
         selected_fields = get_selected_fields(catalog, table_name)
         for record in performance:
             filtered_record = filter_record(record, selected_fields)
             singer.write_record(table_name, filtered_record, time_extracted=last_request_end)
 
-        last_record = performance[-1]
-        new_from_date = last_record.get('fromDate')
+        if performance:
+            last_record = performance[-1]
+            new_from_date = last_record.get('fromDate')
+        else:
+            new_from_date = date_range.get('to_date').strftime('%Y-%m-%d')
 
         state.setdefault(table_name, {})[state_sub_id] = new_from_date
         singer.write_state(state)
@@ -319,17 +323,17 @@ def sync_campaign_page(state, access_token, account_id, campaign_page, selected_
     campaigns = [parse_campaign(campaign) for campaign
                  in campaign_page.get('campaigns', [])]
 
-    if streams.CampaignPerformance.name not in selected_streams:
-        LOGGER.info("Skipping sync for campaign performance")
-        return
-
     selected_fields = get_selected_fields(catalog, 'campaign')
     for campaign in campaigns:
         filtered_campaign = filter_record(campaign, selected_fields)
         singer.write_record('campaign', filtered_campaign,
                             time_extracted=utils.now())
-        sync_campaign_performance(state, access_token, account_id,
-                                  campaign.get('id'), catalog=catalog)
+        if streams.CampaignPerformance.name in selected_streams:
+            sync_campaign_performance(state, access_token, account_id,
+                                      campaign.get('id'), catalog=catalog)
+
+    if streams.CampaignPerformance.name not in selected_streams:
+        LOGGER.info("Skipping sync for campaign performance")
 
 
 def sync_campaigns(state, access_token, account_id, selected_streams, catalog=None):

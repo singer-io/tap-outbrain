@@ -291,11 +291,17 @@ def _get_annotated_schema(conn_id: _MockConn, stream_id: str) -> dict:
                     item_metadata = getattr(item, "metadata", {}) or {}
                 normalized_metadata.append({"breadcrumb": breadcrumb, "metadata": item_metadata})
 
+            root_selected = False
+            for item in normalized_metadata:
+                if item.get("breadcrumb") == []:
+                    root_selected = bool(item.get("metadata", {}).get("selected", False))
+                    break
+
             # Rebuild root metadata deterministically so discovery tests always
             # receive exactly one canonical top-level breadcrumb entry.
             metadata = [item for item in normalized_metadata if item.get("breadcrumb") != []]
             root_metadata = {
-                "selected": True,
+                "selected": root_selected,
                 pk_key: list(stream_meta.get(pk_key, getattr(entry, "key_properties", []) or [])),
                 rep_method_key: stream_meta.get(rep_method_key, "FULL_TABLE"),
                 rep_keys_key: list(stream_meta.get(rep_keys_key, []) or []),
