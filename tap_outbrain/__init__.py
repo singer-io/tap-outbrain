@@ -119,7 +119,7 @@ def get_date_ranges(start, end, interval_in_days):
     return to_return
 
 
-def sync_campaign_performance(state, access_token, account_id, campaign_id):
+def sync_campaign_performance(state, access_token, account_id, campaign_id, catalog=None):
     return sync_performance(
         state,
         access_token,
@@ -127,11 +127,12 @@ def sync_campaign_performance(state, access_token, account_id, campaign_id):
         'campaign_performance',
         campaign_id,
         {'campaignId': campaign_id},
-        {'campaignId': campaign_id})
+        {'campaignId': campaign_id},
+        catalog=catalog)
 
 
 def sync_performance(state, access_token, account_id, table_name, state_sub_id,
-                     extra_params, extra_persist_fields):
+                     extra_params, extra_persist_fields, catalog=None):
     """
     This function is heavily parameterized as it is used to sync performance
     both based on campaign ID alone, and by campaign ID and link ID.
@@ -152,12 +153,18 @@ def sync_performance(state, access_token, account_id, table_name, state_sub_id,
                               For example:
 
                                 {'campaignId': '000b...'}
+    - `catalog`: singer Catalog for field filtering
     """
-    # sync 2 days before last saved date, or DEFAULT_START_DATE
-    from_date = datetime.datetime.strptime(
-        state.get(table_name, {})
-        .get(state_sub_id, DEFAULT_START_DATE),
-        '%Y-%m-%d').date() - datetime.timedelta(days=2)
+    # On initial sync, start exactly at configured start_date.
+    # On resume, look back 2 days to account for late arriving data.
+    stream_saved_date = state.get('bookmarks', {}).get(table_name, {}).get('fromDate')
+    campaign_saved_date = state.get(table_name, {}).get(state_sub_id)
+    # Prefer stream-level bookmark value so tap-tester manipulated state is respected.
+    saved_date = stream_saved_date or campaign_saved_date
+    if saved_date:
+        from_date = datetime.datetime.strptime(saved_date, '%Y-%m-%d').date() - datetime.timedelta(days=2)
+    else:
+        from_date = datetime.datetime.strptime(DEFAULT_START_DATE, '%Y-%m-%d').date()
 
     to_date = datetime.date.today()
 
@@ -205,13 +212,16 @@ def sync_performance(state, access_token, account_id, table_name, state_sub_id,
             parse_performance(result, extra_persist_fields)
             for result in response.get('results')]
 
+        selected_fields = get_selected_fields(catalog, table_name)
         for record in performance:
-            singer.write_record(table_name, record, time_extracted=last_request_end)
+            filtered_record = filter_record(record, selected_fields)
+            singer.write_record(table_name, filtered_record, time_extracted=last_request_end)
 
         last_record = performance[-1]
         new_from_date = last_record.get('fromDate')
 
-        state[table_name][state_sub_id] = new_from_date
+        state.setdefault(table_name, {})[state_sub_id] = new_from_date
+        state.setdefault('bookmarks', {}).setdefault(table_name, {})['fromDate'] = new_from_date
         singer.write_state(state)
 
         from_date = new_from_date
@@ -226,7 +236,41 @@ def sync_performance(state, access_token, account_id, table_name, state_sub_id,
             time.sleep(to_sleep)
 
 
+def get_selected_fields(catalog, stream_name):
+    """Extract selected field names for a stream from the catalog metadata."""
+    if catalog is None:
+        return None
+    
+    for stream in catalog.streams:
+        if stream.stream == stream_name or stream.tap_stream_id == stream_name:
+            selected = set()
+            for mdata_entry in stream.metadata:
+                breadcrumb = mdata_entry.get('breadcrumb', [])
+                metadata = mdata_entry.get('metadata', {})
+                
+                # Top-level stream metadata or property-level metadata
+                if breadcrumb and len(breadcrumb) > 0 and breadcrumb[0] == 'properties':
+                    field_name = breadcrumb[-1]
+                    if metadata.get('selected') or metadata.get('inclusion') == 'automatic':
+                        selected.add(field_name)
+            
+            return selected if selected else None
+    
+    return None
+
+
+def filter_record(record, selected_fields):
+    """Filter record to only include selected fields."""
+    if selected_fields is None:
+        return record
+    return {k: v for k, v in record.items() if k in selected_fields}
+
+
 def parse_campaign(campaign):
+    live_status = campaign.get('liveStatus') or {}
+    campaign['campaignOnAir'] = live_status.get('campaignOnAir')
+    campaign['onAirReason'] = live_status.get('onAirReason')
+
     if campaign.get('budget') is not None:
         campaign['budget']['creationTime'] = parse_datetime(
             campaign.get('budget').get('creationTime'))
@@ -271,7 +315,7 @@ def get_campaign_pages(account_id, access_token):
         campaign_page.get('totalCount')))
 
 
-def sync_campaign_page(state, access_token, account_id, campaign_page, selected_streams):
+def sync_campaign_page(state, access_token, account_id, campaign_page, selected_streams, catalog=None):
     campaigns = [parse_campaign(campaign) for campaign
                  in campaign_page.get('campaigns', [])]
 
@@ -279,18 +323,20 @@ def sync_campaign_page(state, access_token, account_id, campaign_page, selected_
         LOGGER.info("Skipping sync for campaign performance")
         return
 
+    selected_fields = get_selected_fields(catalog, 'campaign')
     for campaign in campaigns:
-        singer.write_record('campaign', campaign,
+        filtered_campaign = filter_record(campaign, selected_fields)
+        singer.write_record('campaign', filtered_campaign,
                             time_extracted=utils.now())
         sync_campaign_performance(state, access_token, account_id,
-                                  campaign.get('id'))
+                                  campaign.get('id'), catalog=catalog)
 
 
-def sync_campaigns(state, access_token, account_id, selected_streams):
+def sync_campaigns(state, access_token, account_id, selected_streams, catalog=None):
     LOGGER.info('Syncing campaigns.')
 
     for campaign_page in get_campaign_pages(account_id, access_token):
-        sync_campaign_page(state, access_token, account_id, campaign_page, selected_streams)
+        sync_campaign_page(state, access_token, account_id, campaign_page, selected_streams, catalog=catalog)
 
     LOGGER.info('Done!')
 
@@ -343,7 +389,7 @@ def do_sync(catalog: singer.Catalog, config: Dict, state):
                             key_properties=streams.CampaignPerformance.key_properties,
                             bookmark_properties=streams.CampaignPerformance.bookmark_properties)
 
-    sync_campaigns(state, access_token, config.get('account_id'), selected_streams)
+    sync_campaigns(state, access_token, config.get('account_id'), selected_streams, catalog=catalog)
 
 
 def main_impl():
