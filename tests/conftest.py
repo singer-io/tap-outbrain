@@ -64,7 +64,7 @@ def _has_tap_tester_base_suites() -> bool:
         return False
 
 
-def pytest_ignore_collect(path, config):
+def pytest_ignore_collect(collection_path, config):
     """Skip integration-suite modules when tap_tester base suites are unavailable."""
     if _has_tap_tester_base_suites():
         return False
@@ -77,7 +77,7 @@ def pytest_ignore_collect(path, config):
         "test_pagenation.py",
         "test_start_date.py",
     }
-    return os.path.basename(str(path)) in integration_files
+    return os.path.basename(str(collection_path)) in integration_files
 
 if IS_MOCK_MODE:
     # ── inject stub tap_tester package into sys.modules BEFORE any test
