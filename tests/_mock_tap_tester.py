@@ -263,44 +263,46 @@ def _get_annotated_schema(conn_id: _MockConn, stream_id: str) -> dict:
     In mock mode, we build metadata from scratch to match tap-tester expectations.
     """
     if conn_id.catalog is None:
-        print(f"DEBUG _get_annotated_schema: catalog is None for stream_id={stream_id}")
         return {"schema": {}, "metadata": []}
-    
-    print(f"DEBUG _get_annotated_schema: Looking for stream_id={stream_id}, available streams: {[entry.tap_stream_id for entry in conn_id.catalog.streams]}")
-    
+
     for entry in conn_id.catalog.streams:
         if entry.tap_stream_id == stream_id or entry.stream == stream_id:
-            # Singer discover() doesn't include metadata, so build it fresh
             schema = entry.schema.to_dict() if hasattr(entry, "schema") else {}
-            
-            # Get existing metadata if populated (from real tap-tester), else empty
-            existing_metadata = getattr(entry, "metadata", None) or []
-            metadata = [
-                {"breadcrumb": list(m["breadcrumb"]), "metadata": m["metadata"]}
-                for m in existing_metadata
-                if hasattr(m, "__getitem__")
-            ]
-            
-            # ALWAYS ensure exactly one root breadcrumb entry
-            root_entries = [item for item in metadata if item.get("breadcrumb") == []]
-            print(f"DEBUG _get_annotated_schema: Found stream {entry.stream}, existing_metadata count: {len(existing_metadata)}, root_entries: {len(root_entries)}")
-            
-            if not root_entries:
-                key_props = list(getattr(entry, "key_properties", []) or [])
-                root_metadata = {
-                    "selected": True,
-                    "table-key-properties": key_props,
-                    "forced-replication-method": "FULL_TABLE",
-                    "valid-replication-keys": [],
-                }
-                metadata.insert(0, {"breadcrumb": [], "metadata": root_metadata})
-                print(f"DEBUG _get_annotated_schema: Inserted root breadcrumb, now have {len(metadata)} metadata entries")
-            
+
+            expected = {}
+            if hasattr(conn_id.test, "expected_metadata"):
+                expected = conn_id.test.expected_metadata().get(entry.stream, {})
+
+            key_props = list(getattr(entry, "key_properties", []) or [])
+            replication_method = expected.get("forced-replication-method", "FULL_TABLE")
+            replication_keys = sorted(list(expected.get("valid-replication-keys", set())))
+
+            root_metadata = {
+                "selected": True,
+                "table-key-properties": key_props,
+                "forced-replication-method": replication_method,
+                "valid-replication-keys": replication_keys,
+            }
+
+            metadata = [{"breadcrumb": [], "metadata": root_metadata}]
+
+            properties = schema.get("properties", {}) if isinstance(schema, dict) else {}
+            for field_name in properties.keys():
+                field_meta = {"selected": True}
+                if field_name in key_props or field_name in replication_keys:
+                    field_meta["inclusion"] = "automatic"
+                metadata.append(
+                    {
+                        "breadcrumb": ["properties", field_name],
+                        "metadata": field_meta,
+                    }
+                )
+
             return {
                 "schema": schema,
                 "metadata": metadata,
             }
-    print(f"DEBUG _get_annotated_schema: No matching stream found for {stream_id}")
+
     return {"schema": {}, "metadata": []}
 
 
