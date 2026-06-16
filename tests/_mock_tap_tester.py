@@ -206,6 +206,9 @@ connections.select_catalog_via_metadata = _select_catalog_via_metadata
 
 menagerie = types.ModuleType("tap_tester.menagerie")
 
+# Inject into sys.modules so tap_tester imports get our stub instead of the real one
+sys.modules["tap_tester.menagerie"] = menagerie
+
 
 def _get_exit_status(conn_id: _MockConn, job_name: Any) -> dict:
     return {
@@ -260,7 +263,10 @@ def _get_annotated_schema(conn_id: _MockConn, stream_id: str) -> dict:
     In mock mode, we build metadata from scratch to match tap-tester expectations.
     """
     if conn_id.catalog is None:
+        print(f"DEBUG _get_annotated_schema: catalog is None for stream_id={stream_id}")
         return {"schema": {}, "metadata": []}
+    
+    print(f"DEBUG _get_annotated_schema: Looking for stream_id={stream_id}, available streams: {[entry.tap_stream_id for entry in conn_id.catalog.streams]}")
     
     for entry in conn_id.catalog.streams:
         if entry.tap_stream_id == stream_id or entry.stream == stream_id:
@@ -277,6 +283,8 @@ def _get_annotated_schema(conn_id: _MockConn, stream_id: str) -> dict:
             
             # ALWAYS ensure exactly one root breadcrumb entry
             root_entries = [item for item in metadata if item.get("breadcrumb") == []]
+            print(f"DEBUG _get_annotated_schema: Found stream {entry.stream}, existing_metadata count: {len(existing_metadata)}, root_entries: {len(root_entries)}")
+            
             if not root_entries:
                 key_props = list(getattr(entry, "key_properties", []) or [])
                 root_metadata = {
@@ -286,11 +294,13 @@ def _get_annotated_schema(conn_id: _MockConn, stream_id: str) -> dict:
                     "valid-replication-keys": [],
                 }
                 metadata.insert(0, {"breadcrumb": [], "metadata": root_metadata})
+                print(f"DEBUG _get_annotated_schema: Inserted root breadcrumb, now have {len(metadata)} metadata entries")
             
             return {
                 "schema": schema,
                 "metadata": metadata,
             }
+    print(f"DEBUG _get_annotated_schema: No matching stream found for {stream_id}")
     return {"schema": {}, "metadata": []}
 
 
