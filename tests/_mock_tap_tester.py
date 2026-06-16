@@ -389,6 +389,7 @@ class BaseCase(unittest.TestCase):
     REPLICATION_KEYS = "replication_keys"
     OBEYS_START_DATE = "obeys_start_date"
     RESPECTS_START_DATE = "respects_start_date"
+    LOOK_BACK_WINDOW = "lookback_window"
 
     INCREMENTAL = "INCREMENTAL"
     FULL_TABLE = "FULL_TABLE"
