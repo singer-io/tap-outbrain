@@ -1,6 +1,15 @@
-from tap_tester.base_suite_tests.pagination_test import PaginationTest
+import unittest
+
+try:
+    from tap_tester.base_suite_tests.pagination_test import PaginationTest
+except ImportError:
+    try:
+        from tap_tester.base_suite_tests.pagenation_test import PaginationTest
+    except ImportError:
+        PaginationTest = None
 from base import OutbrainBaseTest
 
+@unittest.skipIf(PaginationTest is None, "tap_tester PaginationTest is unavailable in this environment")
 class OutbrainPaginationTest(PaginationTest, OutbrainBaseTest):
     """
     Ensure tap can replicate multiple pages of data for streams that use pagination.
