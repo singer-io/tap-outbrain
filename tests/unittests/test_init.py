@@ -230,8 +230,12 @@ class TestSyncCampaignPage(unittest.TestCase):
 
         self.assertEqual(mock_write_record.call_count, 2)
         self.assertEqual(mock_sync_perf.call_count, 2)
-        mock_sync_perf.assert_any_call(self.state, self.access_token, self.account_id, 'c1')
-        mock_sync_perf.assert_any_call(self.state, self.access_token, self.account_id, 'c2')
+        mock_sync_perf.assert_any_call(
+            self.state, self.access_token, self.account_id, 'c1', catalog=None
+        )
+        mock_sync_perf.assert_any_call(
+            self.state, self.access_token, self.account_id, 'c2', catalog=None
+        )
 
     @patch('tap_outbrain.sync_campaign_performance')
     @patch('singer.write_record')
@@ -629,7 +633,8 @@ class TestSyncCampaignPerformance(unittest.TestCase):
         mock_sync_perf.assert_called_once_with(
             state, 'tok', 'acct1',
             'campaign_performance', 'c123',
-            {'campaignId': 'c123'}, {'campaignId': 'c123'}
+            {'campaignId': 'c123'}, {'campaignId': 'c123'},
+            catalog=None
         )
 
 

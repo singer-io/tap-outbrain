@@ -86,6 +86,8 @@ def _generate_value(schema: dict, field_name: str = "", record_index: int = 0) -
         return False
 
     if concrete == "string":
+        if fname_lower == "id" or fname_lower.endswith("id"):
+            return f"mock_{field_name}_{record_index + 1}"
         if fmt == "date":
             # Return a YYYY-MM-DD date string
             return _MOCK_DATES[record_index % len(_MOCK_DATES)]

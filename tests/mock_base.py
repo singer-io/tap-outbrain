@@ -15,9 +15,10 @@ dynamically generated JSON built from the tap's own JSON Schema files.
 from __future__ import annotations
 
 import _mock_tap_tester  # noqa: F401 — must be imported first to inject stubs
+from datetime import timedelta
+from pathlib import Path
 from tap_tester.base_suite_tests.base_case import BaseCase
 from mock_data_generator import FIXTURES
-from base import OutbrainBaseTest as _BaseTest
 
 
 class MockOutbrainBaseTest(BaseCase):
@@ -30,6 +31,7 @@ class MockOutbrainBaseTest(BaseCase):
     """
 
     start_date = "2024-01-01T00:00:00Z"
+    bookmark_format = "%Y-%m-%d"
 
     PRIMARY_KEYS = "primary_keys"
     REPLICATION_METHOD = "replication_method"
@@ -85,6 +87,7 @@ class MockOutbrainBaseTest(BaseCase):
                 cls.REPLICATION_METHOD: cls.INCREMENTAL,
                 cls.REPLICATION_KEYS: {"fromDate"},
                 cls.RESPECTS_START_DATE: True,
+                cls.LOOK_BACK_WINDOW: timedelta(days=2),
             },
         }
 
@@ -92,26 +95,41 @@ class MockOutbrainBaseTest(BaseCase):
     def expected_stream_names(cls) -> set:
         return set(cls.expected_metadata().keys())
 
-    @classmethod
-    def expected_primary_keys(cls) -> dict:
-        return {
-            stream: meta[cls.PRIMARY_KEYS]
-            for stream, meta in cls.expected_metadata().items()
+    def expected_primary_keys(self, stream=None) -> dict:
+        primary_keys = {
+            table: properties.get(self.PRIMARY_KEYS, set())
+            for table, properties in self.expected_metadata().items()
         }
+        if stream is None:
+            return primary_keys
+        return primary_keys[stream]
 
-    @classmethod
-    def expected_replication_keys(cls) -> dict:
-        return {
-            stream: meta[cls.REPLICATION_KEYS]
-            for stream, meta in cls.expected_metadata().items()
+    def expected_replication_keys(self, stream=None) -> dict:
+        replication_keys = {
+            table: properties.get(self.REPLICATION_KEYS, set())
+            for table, properties in self.expected_metadata().items()
         }
+        if stream is None:
+            return replication_keys
+        return replication_keys[stream]
 
-    @classmethod
-    def expected_replication_method(cls) -> dict:
-        return {
-            stream: meta[cls.REPLICATION_METHOD]
-            for stream, meta in cls.expected_metadata().items()
+    def expected_replication_method(self, stream=None) -> dict:
+        replication_method = {
+            table: properties.get(self.REPLICATION_METHOD, None)
+            for table, properties in self.expected_metadata().items()
         }
+        if stream is None:
+            return replication_method
+        return replication_method[stream]
+
+    def expected_lookback_window(self, stream=None):
+        lookback = {
+            "campaign": timedelta(days=0),
+            "campaign_performance": timedelta(days=2),
+        }
+        if stream is None:
+            return lookback
+        return lookback[stream]
 
     def _build_mock_request(self):
         """
@@ -128,6 +146,12 @@ class MockOutbrainBaseTest(BaseCase):
             
             params = params or {}
             resp = MagicMock()
+
+            def _as_date_string(value, fallback="2024-01-01"):
+                if value is None:
+                    return fallback
+                text = str(value)
+                return text.split("T", 1)[0]
             
             # Map different endpoints to mock data
             if "/campaigns" in url:
@@ -138,20 +162,26 @@ class MockOutbrainBaseTest(BaseCase):
                     "totalCount": len(campaigns),
                 }
             elif "/periodic" in url or "performance" in url:
-                # Return mock performance records from fixtures
-                perf_records = FIXTURES.get("campaign_performance", [])
-                results = []
-                for rec in perf_records:
-                    results.append({
-                        "metadata": {
-                            "fromDate": rec.get("fromDate", "2024-01-01"),
-                        },
-                        "metrics": {
-                            k: str(v)
-                            for k, v in rec.items()
-                            if k not in ("campaignId", "fromDate")
-                        },
-                    })
+                # Build one performance row keyed off request dates so each
+                # sync range produces a distinct PK tuple for (campaignId, fromDate).
+                perf_template = (FIXTURES.get("campaign_performance") or [{}])[0]
+                from_date = _as_date_string(params.get("from"))
+
+                metrics = {}
+                for key, value in perf_template.items():
+                    if key in ("campaignId", "fromDate"):
+                        continue
+                    if key in {"impressions", "clicks", "conversions"}:
+                        metrics[key] = str(int(value))
+                    else:
+                        metrics[key] = str(value)
+
+                results = [{
+                    "metadata": {
+                        "fromDate": from_date,
+                    },
+                    "metrics": metrics,
+                }]
                 resp.json.return_value = {
                     "totalResults": len(results),
                     "results": results,
@@ -167,27 +197,4 @@ class MockOutbrainBaseTest(BaseCase):
     # Delegate helper methods to the base test class helpers
     @staticmethod
     def _tap_root():
-        return _BaseTest._tap_root()
-
-    @classmethod
-    def _load_schema(cls, stream_name: str) -> dict:
-        return _BaseTest._load_schema(stream_name)
-
-    @staticmethod
-    def _make_selected_catalog():
-        return _BaseTest._make_selected_catalog()
-
-    @staticmethod
-    def make_campaign_record(campaign_id, **overrides):
-        return _BaseTest.make_campaign_record(campaign_id, **overrides)
-
-    @staticmethod
-    def make_performance_record(campaign_id, from_date, **overrides):
-        return _BaseTest.make_performance_record(campaign_id, from_date, **overrides)
-
-    def _collect_periodic_params(self, config=None, campaigns=None, initial_state=None):
-        return _BaseTest()._collect_periodic_params(config, campaigns, initial_state)
-
-    def _run_mock_sync(self, campaigns=None, perf_records_by_campaign=None,
-                       config=None, state=None):
-        return _BaseTest()._run_mock_sync(campaigns, perf_records_by_campaign, config, state)
+        return Path(__file__).resolve().parents[1]

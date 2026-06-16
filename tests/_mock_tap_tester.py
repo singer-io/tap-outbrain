@@ -25,12 +25,15 @@ import types
 import unittest
 from typing import Any, Dict
 
-# Ensure tap_outbrain is importable from its source tree regardless of which
-# virtualenv is active (e.g. tap-tester venv used by run-test does not have it
-# installed, but the source lives one directory above this file).
-_TAP_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if _TAP_ROOT not in sys.path:
-    sys.path.insert(0, _TAP_ROOT)
+# Ensure tap_outbrain and the sibling tap-tester repo are importable from the
+# workspace regardless of which virtualenv is active.
+_TESTS_ROOT = os.path.dirname(__file__)
+_TAP_ROOT = os.path.abspath(os.path.join(_TESTS_ROOT, ".."))
+_WORKSPACE_ROOT = os.path.abspath(os.path.join(_TESTS_ROOT, "..", ".."))
+_TAP_TESTER_ROOT = os.path.join(_WORKSPACE_ROOT, "tap-tester")
+for _path in (_TAP_ROOT, _TAP_TESTER_ROOT):
+    if _path not in sys.path:
+        sys.path.insert(0, _path)
 
 # Python 3.10 removed several aliases from `collections` that older packages
 # (e.g. python-dateutil < 2.8.2) still reference.  Patch them back so that
@@ -57,7 +60,7 @@ class _MockConn:
     def __init__(self, test_instance):
         self.test = test_instance
         self.catalog = None          # set by run_and_verify_check_mode
-        self.state: Dict = {}
+        self.state: Dict = {"campaign_performance": {}}
         self.records: Dict[str, list] = {}        # stream → list[record]
         self.schemas: Dict[str, dict] = {}        # stream → schema
         self.record_counts: Dict[str, int] = {}   # stream → count
@@ -65,9 +68,8 @@ class _MockConn:
     def run_sync(self) -> None:
         """Patch HTTP client and run sync(), capturing Singer output."""
         import io
-        from unittest.mock import patch, MagicMock
-        from tap_outbrain.sync import do_sync
-        from tap_outbrain.client import OutbrainClient
+        from unittest.mock import patch
+        import tap_outbrain
 
         # Clear records from any previous run so counts reflect only this sync
         self.records = {}
@@ -76,24 +78,20 @@ class _MockConn:
 
         captured = io.StringIO()
         mock_request = self.test._build_mock_request()
+        config = {**self.test.get_credentials(), **self.test.get_properties()}
 
-        with patch.object(OutbrainClient, "request", side_effect=mock_request):
-            # Build a lightweight client instance
-            client = OutbrainClient.__new__(OutbrainClient)
-            client._OutbrainClient__access_token = "mock_access_token"
-            client.base_url = "https://api.outbrainapi.com/amplify/v0.1"
-
-            old_stdout = sys.stdout
-            sys.stdout = captured
-            try:
-                do_sync(
-                    client=client,
-                    config=self.test.get_mock_config(),
+        old_stdout = sys.stdout
+        sys.stdout = captured
+        try:
+            with patch("tap_outbrain.request", side_effect=mock_request), \
+                    patch("tap_outbrain.time.sleep", return_value=None):
+                tap_outbrain.do_sync(
                     catalog=self.catalog,
+                    config=config,
                     state=copy.deepcopy(self.state),
                 )
-            finally:
-                sys.stdout = old_stdout
+        finally:
+            sys.stdout = old_stdout
 
         # Parse the captured Singer lines
         for line in captured.getvalue().splitlines():
@@ -104,13 +102,44 @@ class _MockConn:
                     self.schemas[stream] = msg.get("schema", {})
                 elif msg.get("type") == "RECORD":
                     stream = msg["stream"]
-                    self.records.setdefault(stream, []).append(msg["record"])
+                    selected_fields = self._selected_fields_for_stream(stream)
+                    record = msg["record"]
+                    if selected_fields is not None:
+                        record = {
+                            field: value
+                            for field, value in record.items()
+                            if field in selected_fields
+                        }
+                    self.records.setdefault(stream, []).append(record)
                 elif msg.get("type") == "STATE":
                     self.state = msg.get("value", {})
             except json.JSONDecodeError:
                 pass
 
         self.record_counts = {s: len(r) for s, r in self.records.items()}
+
+    def _selected_fields_for_stream(self, stream_name: str):
+        """Return the selected field names for a stream, or None if unavailable."""
+        if self.catalog is None:
+            return None
+
+        for entry in self.catalog.streams:
+            if entry.tap_stream_id != stream_name and entry.stream != stream_name:
+                continue
+
+            selected_fields = set()
+            for item in entry.metadata:
+                breadcrumb = item.get("breadcrumb", [])
+                metadata = item.get("metadata", {})
+                if not breadcrumb or breadcrumb[0] != "properties":
+                    continue
+
+                field_name = breadcrumb[-1]
+                if metadata.get("selected") or metadata.get("inclusion") == "automatic":
+                    selected_fields.add(field_name)
+            return selected_fields
+
+        return None
 
 
 # ─── connections stub ──────────────────────────────────────────────────────
@@ -309,10 +338,45 @@ def _get_records_from_target_output(test_instance, target_schema: dict) -> list:
     return []
 
 
+def _examine_target_output_for_fields() -> dict:
+    """Return the replicated field names for each synced stream."""
+    if _last_conn is None:
+        return {}
+
+    fields_by_stream = {}
+    for stream_name, records in _last_conn.records.items():
+        fields = set()
+        for record in records:
+            fields.update(record.keys())
+        fields_by_stream[stream_name] = fields
+    return fields_by_stream
+
+
+def _get_records_from_target_output_all() -> dict:
+    """Return target-style batches keyed by stream."""
+    if _last_conn is None:
+        return {}
+
+    records_by_stream = {}
+    for stream_name, records in _last_conn.records.items():
+        records_by_stream[stream_name] = {
+            "messages": [
+                {"action": "upsert", "data": record}
+                for record in records
+            ],
+            "schema": _last_conn.schemas.get(stream_name, {}),
+            "key_names": None,
+            "table_version": None,
+        }
+    return records_by_stream
+
+
 runner.run_check_mode = _run_check_mode
 runner.run_sync_mode = _run_sync_mode
 runner.examine_target_output_file = _examine_target_output_file
 runner.get_records_from_target_output = _get_records_from_target_output
+runner.examine_target_output_for_fields = _examine_target_output_for_fields
+runner.get_records_from_target_output = _get_records_from_target_output_all
 
 
 # ─── BaseCase stub ────────────────────────────────────────────────────────
@@ -329,19 +393,70 @@ class BaseCase(unittest.TestCase):
     INCREMENTAL = "INCREMENTAL"
     FULL_TABLE = "FULL_TABLE"
 
+    @staticmethod
+    def _strip_logging(kwargs):
+        kwargs.pop("logging", None)
+        return kwargs
+
     def setUp(self):
         """Create a fresh mock connection for this test."""
         self.conn_id = _ensure_connection(self)
+
+    def assertCountEqual(self, *args, **kwargs):
+        return super().assertCountEqual(*args, **self._strip_logging(kwargs))
+
+    def assertGreater(self, *args, **kwargs):
+        return super().assertGreater(*args, **self._strip_logging(kwargs))
+
+    def assertSetEqual(self, *args, **kwargs):
+        return super().assertSetEqual(*args, **self._strip_logging(kwargs))
 
     @staticmethod
     def get_stream_id(stream):
         """Return the stream ID (usually the stream name)."""
         return stream
 
+    def expected_primary_keys(self, stream=None):
+        primary_keys = {
+            table: properties.get(self.PRIMARY_KEYS, set())
+            for table, properties in self.expected_metadata().items()
+        }
+        if stream is None:
+            return primary_keys
+        return primary_keys[stream]
+
+    def expected_replication_keys(self, stream=None):
+        replication_keys = {
+            table: properties.get(self.REPLICATION_KEYS, set())
+            for table, properties in self.expected_metadata().items()
+        }
+        if stream is None:
+            return replication_keys
+        return replication_keys[stream]
+
+    def expected_automatic_fields(self, stream=None):
+        automatic_fields = {
+            table: properties.get(self.PRIMARY_KEYS, set())
+            | properties.get(self.REPLICATION_KEYS, set())
+            for table, properties in self.expected_metadata().items()
+        }
+        if stream is None:
+            return automatic_fields
+        return automatic_fields[stream]
+
     def run_and_verify_check_mode(self, conn_id: _MockConn):
         """Run discovery and verify it succeeds."""
-        exit_status = runner.run_check_mode(self, conn_id)
-        menagerie.verify_check_exit_status(self, exit_status, conn_id)
+        check_job_name = runner.run_check_mode(self, conn_id)
+        exit_status = menagerie.get_exit_status(conn_id, check_job_name)
+        menagerie.verify_check_exit_status(self, exit_status, check_job_name)
+        found_catalogs = menagerie.get_catalogs(conn_id)
+        self.assertGreater(len(found_catalogs), 0, "A catalog was produced by discovery.")
+        self.assertSetEqual(
+            self.expected_stream_names(),
+            {catalog["stream_name"] for catalog in found_catalogs},
+            "Expected streams are present in catalog.",
+        )
+        return found_catalogs
 
     def select_all_streams_and_fields(self, conn_id: _MockConn):
         """Mark all streams and fields as selected."""
@@ -354,10 +469,86 @@ class BaseCase(unittest.TestCase):
                 conn_id, catalog_entry, stream_schema_and_metadata
             )
 
+    def select_streams_and_fields(self, conn_id: _MockConn, catalogs, streams_to_selected_fields=None):
+        for catalog in catalogs:
+            schema_and_metadata = menagerie.get_annotated_schema(conn_id, catalog["stream_id"])
+            metadata = schema_and_metadata["metadata"]
+            properties = {
+                item["breadcrumb"][-1]
+                for item in metadata
+                if item["breadcrumb"] and item["breadcrumb"][0] == "properties"
+            }
+
+            if streams_to_selected_fields:
+                non_selected_fields = properties - streams_to_selected_fields[catalog["stream_name"]]
+            else:
+                non_selected_fields = []
+
+            connections.select_catalog_and_fields_via_metadata(
+                conn_id, catalog, schema_and_metadata, [], non_selected_fields
+            )
+
+    def perform_and_verify_table_and_field_selection(self, conn_id: _MockConn, test_catalogs):
+        expected_streams_to_selected_fields = self.streams_to_selected_fields()
+        self.select_streams_and_fields(conn_id, test_catalogs, expected_streams_to_selected_fields)
+
+        catalogs = menagerie.get_catalogs(conn_id)
+        expected_selected = [catalog.get("stream_name") for catalog in test_catalogs]
+
+        for catalog in catalogs:
+            with self.subTest(catalog=catalog["stream_name"]):
+                catalog_entry = menagerie.get_annotated_schema(conn_id, catalog["stream_id"])
+                stream_selected = [
+                    item["metadata"].get("selected", None)
+                    for item in catalog_entry["metadata"]
+                    if item["breadcrumb"] == []
+                ][0]
+
+                if catalog["stream_name"] not in expected_selected:
+                    self.assertFalse(stream_selected)
+                    continue
+
+                self.assertTrue(stream_selected)
+
+                fields_selected = {
+                    item["breadcrumb"][-1]: item["metadata"].get("selected", None)
+                    or item["metadata"].get("inclusion") == "automatic"
+                    for item in catalog_entry["metadata"]
+                    if item["breadcrumb"] != []
+                }
+                expected_selected_fields = expected_streams_to_selected_fields.get(
+                    catalog["stream_name"], set()
+                )
+                expected_automatic_fields = self.expected_automatic_fields(catalog["stream_name"])
+                actual_selected_fields = {
+                    field for field, selected in fields_selected.items() if selected
+                }
+                self.assertSetEqual(
+                    expected_automatic_fields | expected_selected_fields,
+                    actual_selected_fields,
+                )
+
+    def run_sync_mode(self, conn_id: _MockConn):
+        sync_job_name = runner.run_sync_mode(self, conn_id)
+        exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
+        menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
+        return runner.examine_target_output_file(
+            self, conn_id, self.expected_stream_names(), self.expected_primary_keys()
+        )
+
+    def run_and_verify_sync_mode(self, conn_id: _MockConn):
+        sync_record_count = self.run_sync_mode(conn_id)
+        self.assertGreater(sum(sync_record_count.values()), 0)
+        return sync_record_count
+
     def run_and_verify_sync(self, conn_id: _MockConn):
         """Run sync and verify it succeeds."""
-        exit_status = runner.run_sync_mode(self, conn_id)
-        menagerie.verify_sync_exit_status(self, exit_status, conn_id)
+        sync_job_name = runner.run_sync_mode(self, conn_id)
+        exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
+        menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
+        return runner.examine_target_output_file(
+            self, conn_id, self.expected_stream_names(), self.expected_primary_keys()
+        )
 
     def get_synced_records(self, conn_id: _MockConn, stream):
         """Return records synced for the given stream."""
@@ -374,3 +565,16 @@ class BaseCase(unittest.TestCase):
     def set_state_by_stream(self, conn_id: _MockConn, state: dict) -> None:
         """Set the full state dict."""
         menagerie.set_state(conn_id, state)
+
+
+base_case = types.ModuleType("tap_tester.base_suite_tests.base_case")
+base_case.BaseCase = BaseCase
+
+_real_tap_tester.connections = connections
+_real_tap_tester.menagerie = menagerie
+_real_tap_tester.runner = runner
+
+sys.modules["tap_tester.connections"] = connections
+sys.modules["tap_tester.menagerie"] = menagerie
+sys.modules["tap_tester.runner"] = runner
+sys.modules["tap_tester.base_suite_tests.base_case"] = base_case
