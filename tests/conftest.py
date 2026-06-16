@@ -54,11 +54,15 @@ def _has_tap_tester_base_suites() -> bool:
         "tap_tester.base_suite_tests.bookmark_test",
         "tap_tester.base_suite_tests.discovery_test",
         "tap_tester.base_suite_tests.start_date_test",
-        "tap_tester.base_suite_tests.pagination_test",
     )
     try:
         for module_name in required_modules:
             importlib.import_module(module_name)
+        # Support both spellings across tap-tester versions.
+        try:
+            importlib.import_module("tap_tester.base_suite_tests.pagination_test")
+        except Exception:
+            importlib.import_module("tap_tester.base_suite_tests.pagenation_test")
         return True
     except Exception:
         return False

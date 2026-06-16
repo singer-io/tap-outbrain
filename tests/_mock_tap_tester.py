@@ -417,8 +417,8 @@ runner.run_check_mode = _run_check_mode
 runner.run_sync_mode = _run_sync_mode
 runner.examine_target_output_file = _examine_target_output_file
 runner.get_records_from_target_output = _get_records_from_target_output
+runner.get_records_from_target_output_all = _get_records_from_target_output_all
 runner.examine_target_output_for_fields = _examine_target_output_for_fields
-runner.get_records_from_target_output = _get_records_from_target_output_all
 
 
 # ─── BaseCase stub ────────────────────────────────────────────────────────
@@ -757,7 +757,8 @@ if _PREEXISTING_RUNNER_MODULE is not None:
     _PREEXISTING_RUNNER_MODULE.run_sync_mode = _run_sync_mode
     _PREEXISTING_RUNNER_MODULE.examine_target_output_file = _examine_target_output_file
     _PREEXISTING_RUNNER_MODULE.examine_target_output_for_fields = _examine_target_output_for_fields
-    _PREEXISTING_RUNNER_MODULE.get_records_from_target_output = _get_records_from_target_output_all
+    _PREEXISTING_RUNNER_MODULE.get_records_from_target_output = _get_records_from_target_output
+
 
 # If tap_tester suite modules were imported before this file, they may still
 # hold references to real connections/menagerie/runner objects. Rebind those

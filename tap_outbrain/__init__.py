@@ -159,8 +159,9 @@ def sync_performance(state, access_token, account_id, table_name, state_sub_id,
     # On resume, look back 2 days to account for late arriving data.
     stream_saved_date = state.get('bookmarks', {}).get(table_name, {}).get('fromDate')
     campaign_saved_date = state.get(table_name, {}).get(state_sub_id)
-    # Prefer stream-level bookmark value so tap-tester manipulated state is respected.
-    saved_date = stream_saved_date or campaign_saved_date
+    # Prefer the campaign-level bookmark when available; fall back to the
+    # stream-level bookmark for tap-tester compatibility.
+    saved_date = campaign_saved_date or stream_saved_date
     if saved_date:
         from_date = datetime.datetime.strptime(saved_date, '%Y-%m-%d').date() - datetime.timedelta(days=2)
     else:
@@ -221,7 +222,6 @@ def sync_performance(state, access_token, account_id, table_name, state_sub_id,
         new_from_date = last_record.get('fromDate')
 
         state.setdefault(table_name, {})[state_sub_id] = new_from_date
-        state.setdefault('bookmarks', {}).setdefault(table_name, {})['fromDate'] = new_from_date
         singer.write_state(state)
 
         from_date = new_from_date
@@ -337,6 +337,14 @@ def sync_campaigns(state, access_token, account_id, selected_streams, catalog=No
 
     for campaign_page in get_campaign_pages(account_id, access_token):
         sync_campaign_page(state, access_token, account_id, campaign_page, selected_streams, catalog=catalog)
+
+    # Set stream-level bookmark once after all campaigns are synced so it
+    # reflects overall progress, while keeping per-campaign bookmarks granular.
+    campaign_performance_state = state.get('campaign_performance', {})
+    if campaign_performance_state:
+        stream_bookmark = max(campaign_performance_state.values())
+        state.setdefault('bookmarks', {}).setdefault('campaign_performance', {})['fromDate'] = stream_bookmark
+        singer.write_state(state)
 
     LOGGER.info('Done!')
 
