@@ -42,7 +42,12 @@ IS_MOCK_MODE = _is_mock_mode()
 if IS_MOCK_MODE:
     # ── inject stub tap_tester package into sys.modules BEFORE any test
     # file is collected and imports tap_tester.* ──────────────────────────
-    import _mock_tap_tester as _stubs  # noqa: E402
+    try:
+        # CI commonly imports this as tests.conftest, so prefer package-relative import.
+        from . import _mock_tap_tester as _stubs  # type: ignore  # noqa: E402
+    except ImportError:
+        # Fallback for direct/local invocation where tests is not treated as a package.
+        import _mock_tap_tester as _stubs  # type: ignore  # noqa: E402
     from pathlib import Path  # noqa: E402
 
     _workspace_root = Path(__file__).resolve().parents[2]
