@@ -14,6 +14,7 @@ sys.modules so existing test files (which import tap_tester.*) work unchanged.
 import os
 import sys
 import types
+import importlib
 
 
 _TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -43,6 +44,40 @@ def _is_mock_mode() -> bool:
 
 
 IS_MOCK_MODE = _is_mock_mode()
+
+
+def _has_tap_tester_base_suites() -> bool:
+    """Return True when tap_tester base suite test classes are importable."""
+    required_modules = (
+        "tap_tester.base_suite_tests.all_fields_test",
+        "tap_tester.base_suite_tests.automatic_fields_test",
+        "tap_tester.base_suite_tests.bookmark_test",
+        "tap_tester.base_suite_tests.discovery_test",
+        "tap_tester.base_suite_tests.start_date_test",
+        "tap_tester.base_suite_tests.pagination_test",
+    )
+    try:
+        for module_name in required_modules:
+            importlib.import_module(module_name)
+        return True
+    except Exception:
+        return False
+
+
+def pytest_ignore_collect(path, config):
+    """Skip integration-suite modules when tap_tester base suites are unavailable."""
+    if _has_tap_tester_base_suites():
+        return False
+
+    integration_files = {
+        "test_all_fields.py",
+        "test_automatic_fields.py",
+        "test_bookmark.py",
+        "test_discovery.py",
+        "test_pagenation.py",
+        "test_start_date.py",
+    }
+    return os.path.basename(str(path)) in integration_files
 
 if IS_MOCK_MODE:
     # ── inject stub tap_tester package into sys.modules BEFORE any test
