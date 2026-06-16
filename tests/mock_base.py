@@ -166,26 +166,42 @@ class MockOutbrainBaseTest(BaseCase):
                     "totalCount": len(campaigns),
                 }
             elif "/periodic" in url or "performance" in url:
-                # Build one performance row keyed off request dates so each
-                # sync range produces a distinct PK tuple for (campaignId, fromDate).
+                # Build multiple performance rows keyed off request date range.
+                # This ensures each sync range produces distinct PK tuples and
+                # exceeds pagination limits (mock page limit is 10 for performance).
+                import datetime
                 perf_template = (FIXTURES.get("campaign_performance") or [{}])[0]
-                from_date = _as_date_string(params.get("to") or params.get("from"))
-
-                metrics = {}
-                for key, value in perf_template.items():
-                    if key in ("campaignId", "fromDate"):
-                        continue
-                    if key in {"impressions", "clicks", "conversions"}:
-                        metrics[key] = str(int(value))
-                    else:
-                        metrics[key] = str(value)
-
-                results = [{
-                    "metadata": {
-                        "fromDate": from_date,
-                    },
-                    "metrics": metrics,
-                }]
+                from_date_str = _as_date_string(params.get("to") or params.get("from"))
+                
+                # Parse the date and generate records spanning the range
+                try:
+                    from_date_obj = datetime.datetime.strptime(from_date_str, "%Y-%m-%d")
+                except:
+                    from_date_obj = datetime.datetime(2024, 1, 1)
+                
+                # Generate multiple records to test pagination (mock API_LIMIT is 10)
+                record_count = 12
+                results = []
+                for i in range(record_count):
+                    record_date = from_date_obj + datetime.timedelta(days=i)
+                    record_from_date = record_date.strftime("%Y-%m-%d")
+                    
+                    metrics = {}
+                    for key, value in perf_template.items():
+                        if key in ("campaignId", "fromDate"):
+                            continue
+                        if key in {"impressions", "clicks", "conversions"}:
+                            metrics[key] = str(int(value))
+                        else:
+                            metrics[key] = str(value)
+                    
+                    results.append({
+                        "metadata": {
+                            "fromDate": record_from_date,
+                        },
+                        "metrics": metrics,
+                    })
+                
                 resp.json.return_value = {
                     "totalResults": len(results),
                     "results": results,

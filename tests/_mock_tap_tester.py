@@ -264,17 +264,15 @@ def _get_annotated_schema(conn_id: _MockConn, stream_id: str) -> dict:
                 {"breadcrumb": list(m["breadcrumb"]), "metadata": m["metadata"]}
                 for m in entry.metadata
             ]
-            if not any(item["breadcrumb"] == [] for item in metadata):
-                metadata.insert(
-                    0,
-                    {
-                        "breadcrumb": [],
-                        "metadata": {
-                            "selected": True,
-                            "table-key-properties": list(getattr(entry, "key_properties", []) or []),
-                        },
-                    },
-                )
+            root_entries = [item for item in metadata if item["breadcrumb"] == []]
+            if not root_entries:
+                root_metadata = {
+                    "selected": True,
+                    "table-key-properties": list(getattr(entry, "key_properties", []) or []),
+                    "forced-replication-method": "FULL_TABLE",
+                    "valid-replication-keys": [],
+                }
+                metadata.insert(0, {"breadcrumb": [], "metadata": root_metadata})
             return {
                 "schema": entry.schema.to_dict(),
                 "metadata": metadata,
