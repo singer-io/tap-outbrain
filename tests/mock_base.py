@@ -32,6 +32,7 @@ class MockOutbrainBaseTest(BaseCase):
 
     start_date = "2024-01-01T00:00:00Z"
     bookmark_format = "%Y-%m-%d"
+    PARENT_STREAM = "parent_stream"
 
     PRIMARY_KEYS = "primary_keys"
     REPLICATION_METHOD = "replication_method"

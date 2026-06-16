@@ -23,6 +23,7 @@ import os
 import sys
 import types
 import unittest
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict
 
 # Ensure tap_outbrain and the sibling tap-tester repo are importable from the
@@ -390,6 +391,8 @@ class BaseCase(unittest.TestCase):
     OBEYS_START_DATE = "obeys_start_date"
     RESPECTS_START_DATE = "respects_start_date"
     LOOK_BACK_WINDOW = "lookback_window"
+    PARENT_STREAM = "parent_stream"
+    API_LIMIT = "api_limit"
 
     INCREMENTAL = "INCREMENTAL"
     FULL_TABLE = "FULL_TABLE"
@@ -399,8 +402,9 @@ class BaseCase(unittest.TestCase):
         kwargs.pop("logging", None)
         return kwargs
 
-    def setUp(self):
+    def setUp(self, **kwargs):
         """Create a fresh mock connection for this test."""
+        self._strip_logging(kwargs)
         self.conn_id = _ensure_connection(self)
 
     def assertCountEqual(self, *args, **kwargs):
@@ -416,6 +420,56 @@ class BaseCase(unittest.TestCase):
     def get_stream_id(stream):
         """Return the stream ID (usually the stream name)."""
         return stream
+
+    @staticmethod
+    def get_stream_name(stream_id):
+        """Return the stream name from stream ID (usually identical)."""
+        return stream_id
+
+    @staticmethod
+    def get_all_streams_and_fields(conn_id: _MockConn):
+        catalogs = menagerie.get_catalogs(conn_id)
+        streams_to_fields = {}
+
+        for cat in catalogs:
+            catalog_entry = menagerie.get_annotated_schema(conn_id, cat["stream_id"])
+            streams_to_fields[cat["stream_name"]] = {
+                item["breadcrumb"][-1]
+                for item in catalog_entry["metadata"]
+                if item["breadcrumb"] != []
+                and item["metadata"].get("inclusion") != "unsupported"
+            }
+
+        return streams_to_fields
+
+    @staticmethod
+    def timedelta_formatted(value, delta=timedelta(days=0), date_format="%Y-%m-%dT%H:%M:%SZ"):
+        """Apply a timedelta and return a string formatted date/datetime."""
+        date_stripped = datetime.strptime(value, date_format) if isinstance(value, str) else value
+        return datetime.strftime(date_stripped + delta, date_format)
+
+    @staticmethod
+    def parse_date(date_value):
+        """Parse Singer date strings into timezone-aware datetime objects."""
+        if isinstance(date_value, datetime):
+            if date_value.tzinfo is None:
+                return date_value.replace(tzinfo=timezone.utc)
+            return date_value
+
+        if date_value is None:
+            return None
+
+        text = str(date_value)
+        if len(text) == 10:
+            return datetime.strptime(text, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+
+        if text.endswith("Z"):
+            text = text[:-1] + "+00:00"
+
+        parsed = datetime.fromisoformat(text)
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed
 
     def expected_primary_keys(self, stream=None):
         primary_keys = {
@@ -444,6 +498,16 @@ class BaseCase(unittest.TestCase):
         if stream is None:
             return automatic_fields
         return automatic_fields[stream]
+
+    def expected_page_size(self, stream=None):
+        page_size = {
+            table: properties[self.API_LIMIT]
+            for table, properties in self.expected_metadata().items()
+            if properties.get(self.API_LIMIT)
+        }
+        if stream is None:
+            return page_size
+        return page_size[stream]
 
     def run_and_verify_check_mode(self, conn_id: _MockConn):
         """Run discovery and verify it succeeds."""
@@ -524,10 +588,17 @@ class BaseCase(unittest.TestCase):
                 actual_selected_fields = {
                     field for field, selected in fields_selected.items() if selected
                 }
-                self.assertSetEqual(
-                    expected_automatic_fields | expected_selected_fields,
-                    actual_selected_fields,
-                )
+
+                if not expected_streams_to_selected_fields:
+                    # "All fields" mode: every discoverable field should be selected.
+                    for field, selected in fields_selected.items():
+                        with self.subTest(field=field):
+                            self.assertTrue(selected)
+                else:
+                    self.assertSetEqual(
+                        expected_automatic_fields | expected_selected_fields,
+                        actual_selected_fields,
+                    )
 
     def run_sync_mode(self, conn_id: _MockConn):
         sync_job_name = runner.run_sync_mode(self, conn_id)
