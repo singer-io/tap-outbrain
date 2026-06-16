@@ -32,12 +32,12 @@ class MockOutbrainBaseTest(BaseCase):
 
     start_date = "2024-01-01T00:00:00Z"
     bookmark_format = "%Y-%m-%d"
-    PARENT_STREAM = "parent_stream"
+    PARENT_STREAM = "parent-stream"
 
-    PRIMARY_KEYS = "primary_keys"
-    REPLICATION_METHOD = "replication_method"
-    REPLICATION_KEYS = "replication_keys"
-    RESPECTS_START_DATE = "respects_start_date"
+    PRIMARY_KEYS = "table-key-properties"
+    REPLICATION_METHOD = "forced-replication-method"
+    REPLICATION_KEYS = "valid-replication-keys"
+    RESPECTS_START_DATE = "table-start-date-usage"
 
     INCREMENTAL = "INCREMENTAL"
     FULL_TABLE = "FULL_TABLE"
@@ -82,7 +82,7 @@ class MockOutbrainBaseTest(BaseCase):
                 cls.REPLICATION_METHOD: cls.FULL_TABLE,
                 cls.REPLICATION_KEYS: set(),
                 cls.RESPECTS_START_DATE: False,
-                cls.API_LIMIT: 50,
+                cls.API_LIMIT: 1,
             },
             "campaign_performance": {
                 cls.PRIMARY_KEYS: {"campaignId", "fromDate"},
@@ -91,7 +91,7 @@ class MockOutbrainBaseTest(BaseCase):
                 cls.RESPECTS_START_DATE: True,
                 cls.LOOK_BACK_WINDOW: timedelta(days=2),
                 cls.PARENT_STREAM: "campaign",
-                cls.API_LIMIT: 100,
+                cls.API_LIMIT: 10,
             },
         }
 
@@ -169,7 +169,7 @@ class MockOutbrainBaseTest(BaseCase):
                 # Build one performance row keyed off request dates so each
                 # sync range produces a distinct PK tuple for (campaignId, fromDate).
                 perf_template = (FIXTURES.get("campaign_performance") or [{}])[0]
-                from_date = _as_date_string(params.get("from"))
+                from_date = _as_date_string(params.get("to") or params.get("from"))
 
                 metrics = {}
                 for key, value in perf_template.items():

@@ -34,7 +34,7 @@ else:
         """
         start_date = "2024-01-01T00:00:00Z"
         bookmark_format = "%Y-%m-%d"
-        PARENT_STREAM = "parent_stream"
+        PARENT_STREAM = "parent-stream"
 
         @staticmethod
         def tap_name():

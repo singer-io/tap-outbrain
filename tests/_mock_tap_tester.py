@@ -397,15 +397,15 @@ runner.get_records_from_target_output = _get_records_from_target_output_all
 class BaseCase(unittest.TestCase):
     """Minimal tap-tester BaseCase for mock mode test compatibility."""
 
-    PRIMARY_KEYS = "primary_keys"
-    UNSUPPORTED_FIELDS = "unsupported-fields"
-    REPLICATION_METHOD = "replication_method"
-    REPLICATION_KEYS = "replication_keys"
-    OBEYS_START_DATE = "obeys_start_date"
-    RESPECTS_START_DATE = "respects_start_date"
-    LOOK_BACK_WINDOW = "lookback_window"
-    PARENT_STREAM = "parent_stream"
-    API_LIMIT = "api_limit"
+    PRIMARY_KEYS = "table-key-properties"
+    UNSUPPORTED_FIELDS = "unsupported"
+    REPLICATION_METHOD = "forced-replication-method"
+    REPLICATION_KEYS = "valid-replication-keys"
+    OBEYS_START_DATE = "obey-start-date"
+    RESPECTS_START_DATE = "table-start-date-usage"
+    LOOK_BACK_WINDOW = "table-look-back-window"
+    PARENT_STREAM = "parent-stream"
+    API_LIMIT = "API_LIMIT"
 
     INCREMENTAL = "INCREMENTAL"
     FULL_TABLE = "FULL_TABLE"
@@ -533,7 +533,7 @@ class BaseCase(unittest.TestCase):
 
     def expected_unsupported_fields(self, stream=None):
         unsupported_fields = {
-            table: properties.get(self.UNSUPPORTED_FIELDS, [])
+            table: set(properties.get(self.UNSUPPORTED_FIELDS, set()))
             for table, properties in self.expected_metadata().items()
         }
         if stream is None:
