@@ -421,52 +421,6 @@ runner.examine_target_output_for_fields = _examine_target_output_for_fields
 runner.get_records_from_target_output = _get_records_from_target_output_all
 
 
-def _rebind_suite_module_globals() -> None:
-    """Ensure suite modules reference mock connections/menagerie/runner."""
-    # Package-level bindings
-    if "tap_tester" in sys.modules:
-        sys.modules["tap_tester"].connections = connections
-        sys.modules["tap_tester"].menagerie = menagerie
-        sys.modules["tap_tester"].runner = runner
-
-    # Submodule bindings
-    if "tap_tester.connections" in sys.modules:
-        mod = sys.modules["tap_tester.connections"]
-        mod.ensure_connection = _ensure_connection
-        mod.select_catalog_and_fields_via_metadata = _select_catalog_and_fields_via_metadata
-        mod.select_catalog_via_metadata = _select_catalog_via_metadata
-
-    if "tap_tester.menagerie" in sys.modules:
-        mod = sys.modules["tap_tester.menagerie"]
-        mod.get_exit_status = _get_exit_status
-        mod.verify_sync_exit_status = _verify_sync_exit_status
-        mod.verify_check_exit_status = _verify_check_exit_status
-        mod.get_state = _get_state
-        mod.set_state = _set_state
-        mod.get_catalogs = _get_catalogs
-        mod.get_annotated_schema = _get_annotated_schema
-        mod.select_catalog = _select_catalog
-
-    if "tap_tester.runner" in sys.modules:
-        mod = sys.modules["tap_tester.runner"]
-        mod.run_check_mode = _run_check_mode
-        mod.run_sync_mode = _run_sync_mode
-        mod.examine_target_output_file = _examine_target_output_file
-        mod.examine_target_output_for_fields = _examine_target_output_for_fields
-        mod.get_records_from_target_output = _get_records_from_target_output_all
-
-    # Rebind all already-loaded suite modules (import order agnostic)
-    for module_name, module in list(sys.modules.items()):
-        if not module_name.startswith("tap_tester.base_suite_tests."):
-            continue
-        if hasattr(module, "connections"):
-            module.connections = connections
-        if hasattr(module, "menagerie"):
-            module.menagerie = menagerie
-        if hasattr(module, "runner"):
-            module.runner = runner
-
-
 # ─── BaseCase stub ────────────────────────────────────────────────────────
 
 class BaseCase(unittest.TestCase):
@@ -493,7 +447,6 @@ class BaseCase(unittest.TestCase):
     def setUp(self, **kwargs):
         """Create a fresh mock connection for this test."""
         self._strip_logging(kwargs)
-        _rebind_suite_module_globals()
         self.conn_id = _ensure_connection(self)
 
     def assertCountEqual(self, *args, **kwargs):

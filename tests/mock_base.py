@@ -168,14 +168,27 @@ class MockOutbrainBaseTest(BaseCase):
                 }
             elif "/periodic" in url or "performance" in url:
                 # Build multiple performance rows keyed off request date range.
-                # Keep records deterministic across syncs so start-date/bookmark
-                # assertions compare stable PK sets in mock mode.
+                # Generate records starting from params['from'] to ensure records advance
+                # forward in time across syncs for proper bookmark progression.
                 perf_template = (FIXTURES.get("campaign_performance") or [{}])[0]
 
-                # Fixed anchor range ensures deterministic ordering and
-                # predictable bookmark values while still exercising pagination.
-                from_date_obj = datetime.datetime(2024, 1, 1)
-                record_count = 12
+                from_date_str = _as_date_string(params.get("from", params.get("to")))
+                to_date_str = _as_date_string(params.get("to", params.get("from")))
+
+                try:
+                    from_date_obj = datetime.datetime.strptime(from_date_str, "%Y-%m-%d")
+                    to_date_obj = datetime.datetime.strptime(to_date_str, "%Y-%m-%d")
+                except Exception:
+                    from_date_obj = datetime.datetime(2024, 1, 1)
+                    to_date_obj = from_date_obj
+
+                if to_date_obj < from_date_obj:
+                    from_date_obj, to_date_obj = to_date_obj, from_date_obj
+
+                # Keep generated records inside request boundaries so bookmarks
+                # never jump into the future and subsequent syncs never go empty.
+                span_days = (to_date_obj - from_date_obj).days + 1
+                record_count = max(1, min(span_days, 30))
                 results = []
                 for i in range(record_count):
                     record_date = from_date_obj + datetime.timedelta(days=i)

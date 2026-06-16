@@ -21,33 +21,6 @@ def _is_mock_mode() -> bool:
     return not has_live_creds
 
 if _is_mock_mode():
-    import _mock_tap_tester as _mock_tt
-    import tap_tester as _tap_tester
-
-    # Ensure tap_tester package-level references use mock stubs.
-    _tap_tester.connections = _mock_tt.connections
-    _tap_tester.menagerie = _mock_tt.menagerie
-    _tap_tester.runner = _mock_tt.runner
-
-    # If any suite modules are imported/reused, rebind their module-level
-    # references to the mock stubs so they never call real tap-tester I/O.
-    import sys
-    for _suite_module in (
-        "tap_tester.base_suite_tests.discovery_test",
-        "tap_tester.base_suite_tests.bookmark_test",
-        "tap_tester.base_suite_tests.start_date_test",
-        "tap_tester.base_suite_tests.pagination_test",
-    ):
-        _mod = sys.modules.get(_suite_module)
-        if _mod is None:
-            continue
-        if hasattr(_mod, "connections"):
-            _mod.connections = _mock_tt.connections
-        if hasattr(_mod, "menagerie"):
-            _mod.menagerie = _mock_tt.menagerie
-        if hasattr(_mod, "runner"):
-            _mod.runner = _mock_tt.runner
-
     from mock_base import MockOutbrainBaseTest as OutbrainBaseTest
 else:
     from tap_tester import connections, menagerie, runner  # noqa: F401
