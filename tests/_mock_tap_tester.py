@@ -53,6 +53,10 @@ if "tap_tester" not in sys.modules:
     sys.modules["tap_tester"] = types.ModuleType("tap_tester")
 import tap_tester as _real_tap_tester
 
+_PREEXISTING_CONNECTIONS_MODULE = sys.modules.get("tap_tester.connections")
+_PREEXISTING_MENAGERIE_MODULE = sys.modules.get("tap_tester.menagerie")
+_PREEXISTING_RUNNER_MODULE = sys.modules.get("tap_tester.runner")
+
 # ─── Mock connection object ────────────────────────────────────────────────
 
 class _MockConn:
@@ -730,6 +734,30 @@ sys.modules["tap_tester.connections"] = connections
 sys.modules["tap_tester.menagerie"] = menagerie
 sys.modules["tap_tester.runner"] = runner
 sys.modules["tap_tester.base_suite_tests.base_case"] = base_case
+
+# If tap_tester submodules were already imported, patch those module objects
+# in place so existing references in suite modules call the mock functions.
+if _PREEXISTING_CONNECTIONS_MODULE is not None:
+    _PREEXISTING_CONNECTIONS_MODULE.ensure_connection = _ensure_connection
+    _PREEXISTING_CONNECTIONS_MODULE.select_catalog_and_fields_via_metadata = _select_catalog_and_fields_via_metadata
+    _PREEXISTING_CONNECTIONS_MODULE.select_catalog_via_metadata = _select_catalog_via_metadata
+
+if _PREEXISTING_MENAGERIE_MODULE is not None:
+    _PREEXISTING_MENAGERIE_MODULE.get_exit_status = _get_exit_status
+    _PREEXISTING_MENAGERIE_MODULE.verify_sync_exit_status = _verify_sync_exit_status
+    _PREEXISTING_MENAGERIE_MODULE.verify_check_exit_status = _verify_check_exit_status
+    _PREEXISTING_MENAGERIE_MODULE.get_state = _get_state
+    _PREEXISTING_MENAGERIE_MODULE.set_state = _set_state
+    _PREEXISTING_MENAGERIE_MODULE.get_catalogs = _get_catalogs
+    _PREEXISTING_MENAGERIE_MODULE.get_annotated_schema = _get_annotated_schema
+    _PREEXISTING_MENAGERIE_MODULE.select_catalog = _select_catalog
+
+if _PREEXISTING_RUNNER_MODULE is not None:
+    _PREEXISTING_RUNNER_MODULE.run_check_mode = _run_check_mode
+    _PREEXISTING_RUNNER_MODULE.run_sync_mode = _run_sync_mode
+    _PREEXISTING_RUNNER_MODULE.examine_target_output_file = _examine_target_output_file
+    _PREEXISTING_RUNNER_MODULE.examine_target_output_for_fields = _examine_target_output_for_fields
+    _PREEXISTING_RUNNER_MODULE.get_records_from_target_output = _get_records_from_target_output_all
 
 # If tap_tester suite modules were imported before this file, they may still
 # hold references to real connections/menagerie/runner objects. Rebind those
