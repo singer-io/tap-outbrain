@@ -255,26 +255,40 @@ def _get_annotated_schema(conn_id: _MockConn, stream_id: str) -> dict:
 
     Breadcrumbs are returned as *lists* (not tuples) to match the JSON
     wire format expected by tap-tester's BaseCase assertion helpers.
+    
+    Note: Singer discover() outputs only schema; metadata is built by tap-tester.
+    In mock mode, we build metadata from scratch to match tap-tester expectations.
     """
     if conn_id.catalog is None:
         return {"schema": {}, "metadata": []}
+    
     for entry in conn_id.catalog.streams:
         if entry.tap_stream_id == stream_id or entry.stream == stream_id:
+            # Singer discover() doesn't include metadata, so build it fresh
+            schema = entry.schema.to_dict() if hasattr(entry, "schema") else {}
+            
+            # Get existing metadata if populated (from real tap-tester), else empty
+            existing_metadata = getattr(entry, "metadata", None) or []
             metadata = [
                 {"breadcrumb": list(m["breadcrumb"]), "metadata": m["metadata"]}
-                for m in entry.metadata
+                for m in existing_metadata
+                if hasattr(m, "__getitem__")
             ]
-            root_entries = [item for item in metadata if item["breadcrumb"] == []]
+            
+            # ALWAYS ensure exactly one root breadcrumb entry
+            root_entries = [item for item in metadata if item.get("breadcrumb") == []]
             if not root_entries:
+                key_props = list(getattr(entry, "key_properties", []) or [])
                 root_metadata = {
                     "selected": True,
-                    "table-key-properties": list(getattr(entry, "key_properties", []) or []),
+                    "table-key-properties": key_props,
                     "forced-replication-method": "FULL_TABLE",
                     "valid-replication-keys": [],
                 }
                 metadata.insert(0, {"breadcrumb": [], "metadata": root_metadata})
+            
             return {
-                "schema": entry.schema.to_dict(),
+                "schema": schema,
                 "metadata": metadata,
             }
     return {"schema": {}, "metadata": []}

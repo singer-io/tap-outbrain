@@ -1,0 +1,353 @@
+{"type": "SCHEMA", "stream": "campaign", "schema": {
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "name": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "campaignOnAir": {
+      "type": [
+        "null",
+        "boolean"
+      ]
+    },
+    "onAirReason": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "enabled": {
+      "type": [
+        "null",
+        "boolean"
+      ]
+    },
+    "budget": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "properties": {
+        "id": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "name": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "shared": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "amount": {
+          "type": [
+            "null",
+            "number"
+          ]
+        },
+        "currency": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "amountRemaining": {
+          "type": [
+            "null",
+            "number"
+          ]
+        },
+        "amountSpent": {
+          "type": [
+            "null",
+            "number"
+          ]
+        },
+        "creationTime": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "format": "date-time"
+        },
+        "lastModified": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "format": "date-time"
+        },
+        "startDate": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "format": "date"
+        },
+        "endDate": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "format": "date"
+        },
+        "runForever": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "type": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "pacing": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "dailyTarget": {
+          "type": [
+            "null",
+            "number"
+          ]
+        },
+        "maximumAmount": {
+          "type": [
+            "null",
+            "number"
+          ]
+        }
+      }
+    },
+    "cpc": {
+      "type": [
+        "null",
+        "number"
+      ]
+    }
+  }
+}, "key_properties": ["id"]}
+{"type": "SCHEMA", "stream": "campaign_performance", "schema": {"type": "object", "properties": {"campaignId": {"type": ["null", "string"]}, "fromDate": {"type": ["null", "string"], "format": "date-time"}, "impressions": {"type": ["null", "number"]}, "clicks": {"type": ["null", "number"]}, "ctr": {"type": ["null", "number"]}, "spend": {"type": ["null", "number"]}, "ecpc": {"type": ["null", "number"]}, "conversions": {"type": ["null", "number"]}, "conversionRate": {"type": ["null", "number"]}, "cpa": {"type": ["null", "number"]}}}, "key_properties": ["campaignId", "fromDate"], "bookmark_properties": ["fromDate"]}
+{"type": "RECORD", "stream": "campaign", "record": {"id": "004d0fc7030c76156651292a9ed4a450ff", "internalId": 1119060730, "name": "Sales_Mobile_2026-05-31", "enabled": true, "creationTime": "2026-05-07 03:07:07", "lastModified": "2026-05-07 03:07:07", "cpc": 0.0491, "autoArchived": false, "minimumCpc": 0.01, "currency": "USD", "targeting": {"platform": ["MOBILE", "TABLET"], "language": "en", "excludeAdBlockUsers": false, "nativePlacements": {"enabled": false}, "includeCellularNetwork": true, "nativePlacementsEnabled": false, "locationsVersion": "V2", "verticalFeedOnly": false}, "marketerId": "00faf7d46a9226f3476b1c0730b7c2e97a", "contentType": "ARTICLES", "budget": {"id": "00ae9182e5a2017063e390f2302f315b5d", "name": "37d9ed45-b10a-4163-a79a-7f7a1f32b45b", "shared": false, "amount": 50.0, "currency": "USD", "creationTime": "2026-05-07T03:07:07Z", "lastModified": "2026-05-07T03:07:07Z", "startDate": "2026-05-31", "endDate": "2026-06-02", "runForever": false, "type": "DAILY", "pacing": "SPEND_ASAP"}, "prefixTrackingCode": {}, "liveStatus": {"onAirReason": "CAMPAIGN_FLY_DATES_FUTURE", "campaignOnAir": false, "amountSpent": 0.0, "onAirModificationTime": "2026-05-07 03:07:07"}, "readonly": false, "startHour": "12:00 AM", "onAirType": "StartHour", "objective": "Conversions", "creativeFormat": "Standard", "dynamicRetargeting": false, "adReviewLevel": "INTERNAL_REVIEW", "isTamCampaign": false}, "time_extracted": "2026-05-07T10:02:27.654830Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2024-12-30", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2024-12-31", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-01", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-02", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-03", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-04", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-05", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-06", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-07", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-08", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-09", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-10", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-11", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-12", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-13", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-14", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-15", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-16", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-17", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-18", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-19", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-20", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-21", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-22", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-23", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-24", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-25", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-26", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-27", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-28", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-29", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-30", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-01-31", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-01", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-02", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-03", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-04", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-05", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-06", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-07", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-08", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-09", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-10", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-11", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-12", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-13", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-14", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-15", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-16", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-17", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-18", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-19", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-20", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-21", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-22", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-23", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-24", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-25", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-26", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-27", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-02-28", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-01", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-02", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-03", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-04", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-05", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-06", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-07", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-08", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-09", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-10", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-11", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-12", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-13", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-14", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-15", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-16", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-17", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-18", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-19", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-20", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-21", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-22", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-23", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-24", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-25", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-26", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-27", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-28", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-29", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-30", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-03-31", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-01", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-02", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-03", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-04", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-05", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-06", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-07", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-08", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:02:28.399393Z"}
+{"type": "STATE", "value": {"campaign_performance": {"004d0fc7030c76156651292a9ed4a450ff": "2025-04-08"}}}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-09", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-10", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-11", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-12", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-13", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-14", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-15", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-16", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-17", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-18", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-19", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-20", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-21", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-22", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-23", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-24", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-25", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-26", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-27", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-28", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-29", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-04-30", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-01", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-02", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-03", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-04", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-05", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-06", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-07", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-08", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-09", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-10", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-11", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-12", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-13", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-14", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-15", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-16", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-17", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-18", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-19", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-20", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-21", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-22", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-23", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-24", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-25", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-26", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-27", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-28", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-29", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-30", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-05-31", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-01", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-02", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-03", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-04", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-05", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-06", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-07", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-08", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-09", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-10", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-11", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-12", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-13", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-14", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-15", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-16", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-17", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-18", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-19", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-20", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-21", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-22", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-23", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-24", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-25", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-26", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-27", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-28", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-29", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-06-30", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-07-01", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-07-02", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-07-03", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-07-04", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-07-05", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-07-06", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-07-07", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-07-08", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-07-09", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-07-10", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-07-11", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-07-12", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-07-13", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-07-14", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-07-15", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-07-16", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "RECORD", "stream": "campaign_performance", "record": {"fromDate": "2025-07-17", "impressions": 0, "clicks": 0, "ctr": 0.0, "spend": 0.0, "ecpc": 0.0, "conversions": 0, "conversionRate": 0.0, "cpa": 0.0, "campaignId": "004d0fc7030c76156651292a9ed4a450ff"}, "time_extracted": "2026-05-07T10:03:01.785455Z"}
+{"type": "STATE", "value": {"campaign_performance": {"004d0fc7030c76156651292a9ed4a450ff": "2025-07-17"}}}

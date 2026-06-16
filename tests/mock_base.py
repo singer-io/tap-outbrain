@@ -15,6 +15,7 @@ dynamically generated JSON built from the tap's own JSON Schema files.
 from __future__ import annotations
 
 import _mock_tap_tester  # noqa: F401 — must be imported first to inject stubs
+import datetime
 from datetime import timedelta
 from pathlib import Path
 from tap_tester.base_suite_tests.base_case import BaseCase
@@ -167,11 +168,12 @@ class MockOutbrainBaseTest(BaseCase):
                 }
             elif "/periodic" in url or "performance" in url:
                 # Build multiple performance rows keyed off request date range.
-                # This ensures each sync range produces distinct PK tuples and
-                # exceeds pagination limits (mock page limit is 10 for performance).
-                import datetime
+                # Generate records starting from params['from'] to ensure records advance
+                # forward in time across syncs for proper bookmark progression.
                 perf_template = (FIXTURES.get("campaign_performance") or [{}])[0]
-                from_date_str = _as_date_string(params.get("to") or params.get("from"))
+                
+                # Use 'from' date (range start) so records increment forward from there
+                from_date_str = _as_date_string(params.get("from", params.get("to")))
                 
                 # Parse the date and generate records spanning the range
                 try:
