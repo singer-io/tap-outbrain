@@ -206,9 +206,6 @@ connections.select_catalog_via_metadata = _select_catalog_via_metadata
 
 menagerie = types.ModuleType("tap_tester.menagerie")
 
-# Inject into sys.modules so tap_tester imports get our stub instead of the real one
-sys.modules["tap_tester.menagerie"] = menagerie
-
 
 def _get_exit_status(conn_id: _MockConn, job_name: Any) -> dict:
     return {
@@ -269,40 +266,44 @@ def _get_annotated_schema(conn_id: _MockConn, stream_id: str) -> dict:
         if entry.tap_stream_id == stream_id or entry.stream == stream_id:
             schema = entry.schema.to_dict() if hasattr(entry, "schema") else {}
 
-            expected = {}
+            pk_key = getattr(conn_id.test, "PRIMARY_KEYS", "table-key-properties")
+            rep_method_key = getattr(conn_id.test, "REPLICATION_METHOD", "forced-replication-method")
+            rep_keys_key = getattr(conn_id.test, "REPLICATION_KEYS", "valid-replication-keys")
+            parent_key = getattr(conn_id.test, "PARENT_STREAM", "parent-stream")
+
+            expected_meta = {}
             if hasattr(conn_id.test, "expected_metadata"):
-                expected = conn_id.test.expected_metadata().get(entry.stream, {})
+                expected_meta = conn_id.test.expected_metadata()
+            stream_meta = expected_meta.get(entry.stream) or expected_meta.get(entry.tap_stream_id) or {}
 
-            key_props = list(getattr(entry, "key_properties", []) or [])
-            replication_method = expected.get("forced-replication-method", "FULL_TABLE")
-            replication_keys = sorted(list(expected.get("valid-replication-keys", set())))
+            normalized_metadata = []
+            existing_metadata = getattr(entry, "metadata", None) or []
+            for item in existing_metadata:
+                if isinstance(item, dict):
+                    breadcrumb = list(item.get("breadcrumb", []))
+                    item_metadata = item.get("metadata", {})
+                else:
+                    breadcrumb = list(getattr(item, "breadcrumb", []) or [])
+                    item_metadata = getattr(item, "metadata", {}) or {}
+                normalized_metadata.append({"breadcrumb": breadcrumb, "metadata": item_metadata})
 
+            # Rebuild root metadata deterministically so discovery tests always
+            # receive exactly one canonical top-level breadcrumb entry.
+            metadata = [item for item in normalized_metadata if item.get("breadcrumb") != []]
             root_metadata = {
                 "selected": True,
-                "table-key-properties": key_props,
-                "forced-replication-method": replication_method,
-                "valid-replication-keys": replication_keys,
+                pk_key: list(stream_meta.get(pk_key, getattr(entry, "key_properties", []) or [])),
+                rep_method_key: stream_meta.get(rep_method_key, "FULL_TABLE"),
+                rep_keys_key: list(stream_meta.get(rep_keys_key, []) or []),
             }
-
-            metadata = [{"breadcrumb": [], "metadata": root_metadata}]
-
-            properties = schema.get("properties", {}) if isinstance(schema, dict) else {}
-            for field_name in properties.keys():
-                field_meta = {"selected": True}
-                if field_name in key_props or field_name in replication_keys:
-                    field_meta["inclusion"] = "automatic"
-                metadata.append(
-                    {
-                        "breadcrumb": ["properties", field_name],
-                        "metadata": field_meta,
-                    }
-                )
+            if stream_meta.get(parent_key):
+                root_metadata[parent_key] = stream_meta[parent_key]
+            metadata.insert(0, {"breadcrumb": [], "metadata": root_metadata})
 
             return {
                 "schema": schema,
                 "metadata": metadata,
             }
-
     return {"schema": {}, "metadata": []}
 
 
@@ -729,3 +730,22 @@ sys.modules["tap_tester.connections"] = connections
 sys.modules["tap_tester.menagerie"] = menagerie
 sys.modules["tap_tester.runner"] = runner
 sys.modules["tap_tester.base_suite_tests.base_case"] = base_case
+
+# If tap_tester suite modules were imported before this file, they may still
+# hold references to real connections/menagerie/runner objects. Rebind those
+# module-level imports so every suite uses the mock stubs consistently.
+for _suite_module in (
+    "tap_tester.base_suite_tests.discovery_test",
+    "tap_tester.base_suite_tests.bookmark_test",
+    "tap_tester.base_suite_tests.start_date_test",
+    "tap_tester.base_suite_tests.pagination_test",
+):
+    _mod = sys.modules.get(_suite_module)
+    if _mod is None:
+        continue
+    if hasattr(_mod, "connections"):
+        _mod.connections = connections
+    if hasattr(_mod, "menagerie"):
+        _mod.menagerie = menagerie
+    if hasattr(_mod, "runner"):
+        _mod.runner = runner

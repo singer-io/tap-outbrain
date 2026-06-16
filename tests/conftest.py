@@ -15,7 +15,6 @@ import os
 import sys
 import types
 import importlib
-import importlib.util
 
 
 _TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -59,8 +58,7 @@ def _has_tap_tester_base_suites() -> bool:
     )
     try:
         for module_name in required_modules:
-            if importlib.util.find_spec(module_name) is None:
-                return False
+            importlib.import_module(module_name)
         return True
     except Exception:
         return False
@@ -119,4 +117,4 @@ if IS_MOCK_MODE:
         ("tap_tester.base_suite_tests", _bst),
         ("tap_tester.base_suite_tests.base_case", _bstbc),
     ]:
-        sys.modules[_name] = _mod
+        sys.modules.setdefault(_name, _mod)
