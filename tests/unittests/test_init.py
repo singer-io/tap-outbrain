@@ -327,14 +327,15 @@ class TestDoDiscover(unittest.TestCase):
     @patch('sys.stdout')
     @patch('tap_outbrain.discover')
     def test_do_discover_dumps_catalog(self, mock_discover, mock_stdout):
-        """do_discover calls discover() and writes JSON to stdout."""
+        """do_discover calls discover(client) and writes JSON to stdout."""
         mock_catalog = MagicMock()
         mock_catalog.to_dict.return_value = {'streams': []}
         mock_discover.return_value = mock_catalog
+        mock_client = MagicMock()
 
-        do_discover()
+        do_discover(mock_client)
 
-        mock_discover.assert_called_once()
+        mock_discover.assert_called_once_with(mock_client)
         mock_catalog.to_dict.assert_called_once()
 
 

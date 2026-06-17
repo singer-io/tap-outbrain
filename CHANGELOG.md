@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.0
+  * Exclude un-authorized streams from the catalog during discovery. [#TBD](https://github.com/singer-io/tap-outbrain/pull/TBD)
+
 ## 1.1.0
   * Upgrade Python to 3.12 in CircleCI [#30](https://github.com/singer-io/tap-outbrain/pull/30)
   * Upgrade `singer-python`, `requests` and `python-dateutil` to latest version
