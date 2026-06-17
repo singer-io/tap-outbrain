@@ -228,27 +228,10 @@ class TestApplyAccessChecks(unittest.TestCase):
             ("campaign_performance", _make_stream_cls(accessible=True, parent="campaign")),
         ]
         schemas, meta = self._schemas_and_meta()
-        # _prune_inaccessible_children also checks STREAMS so patch it globally
-        with patch("tap_outbrain.discover.STREAMS") as mock_streams2:
-            mock_streams2.items.return_value = [
-                ("campaign", _make_stream_cls(accessible=False, parent=None)),
-                ("campaign_performance", _make_stream_cls(accessible=True, parent="campaign")),
-            ]
-            # Both apply_access_checks' own loop and _prune need the patch
-            # Re-run with a single consistent patch at module level
-            pass
-
-        # Simpler: patch once via STREAMS at module level
-        streams_dict = {
-            "campaign": _make_stream_cls(accessible=False, parent=None),
-            "campaign_performance": _make_stream_cls(accessible=True, parent="campaign"),
-        }
-        with patch.dict("tap_outbrain.discover.STREAMS", streams_dict, clear=True):
-            schemas, meta = self._schemas_and_meta()
-            with self.assertRaises(OutbrainForbiddenError):
-                # campaign removed → only campaign_performance remains,
-                # then _prune removes it too → no schemas → raises
-                _apply_access_checks(_make_client(), schemas, meta)
+        with self.assertRaises(OutbrainForbiddenError):
+            # campaign removed → only campaign_performance remains,
+            # then _prune removes it too → no schemas → raises
+            _apply_access_checks(_make_client(), schemas, meta)
 
     @patch.dict(
         "tap_outbrain.discover.STREAMS",
@@ -296,7 +279,7 @@ class TestApplyAccessChecks(unittest.TestCase):
         schemas = {"campaign": _MOCK_CAMPAIGN_SCHEMA, "extra_stream": extra_schema}
         meta = {
             "campaign": _build_mock_metadata("campaign"),
-            "extra_stream": _build_mock_metadata("campaign"),
+            "extra_stream": [],
         }
         with patch.dict("tap_outbrain.discover.STREAMS", streams_dict, clear=True):
             _apply_access_checks(_make_client(), schemas, meta)

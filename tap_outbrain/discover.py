@@ -73,7 +73,7 @@ def discover(client=None) -> Catalog:
     """
     schemas, field_metadata = get_schemas()
 
-    if client:  # Checking for client as integration tests are written without client in discovery
+    if client is not None:  # Checking for client as integration tests are written without client in discovery
         _apply_access_checks(client, schemas, field_metadata)
 
     catalog = Catalog([])
