@@ -24,6 +24,7 @@ import sys
 import types
 import unittest
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any, Dict
 
 # Ensure tap_outbrain and the sibling tap-tester repo are importable from the
@@ -784,3 +785,252 @@ for _suite_module in (
         _mod.menagerie = menagerie
     if hasattr(_mod, "runner"):
         _mod.runner = runner
+
+
+# ─── Mock data and test base (single-file mock support) ───────────────────
+
+_SCHEMA_DIR = Path(__file__).parent.parent / "tap_outbrain" / "schemas"
+_MOCK_DATES = [
+    "2024-01-01",
+    "2024-05-10",
+    "2024-05-31",
+]
+
+
+def _pick_concrete_type(types: list[str]) -> str:
+    """Return the first non-null JSON Schema type from a mixed list."""
+    for schema_type in types:
+        if schema_type != "null":
+            return schema_type
+    return "null"
+
+
+def _generate_value(schema: dict, field_name: str = "", record_index: int = 0) -> Any:
+    """Recursively synthesize one value that satisfies schema."""
+    if not schema:
+        return None
+
+    raw_type = schema.get("type", "string")
+    types = raw_type if isinstance(raw_type, list) else [raw_type]
+    concrete = _pick_concrete_type(types)
+    field_name_lower = field_name.lower()
+    field_format = schema.get("format", "")
+
+    if concrete == "null":
+        return None
+    if concrete == "integer":
+        return record_index + 1
+    if concrete == "number":
+        return float(record_index + 1)
+    if concrete == "boolean":
+        return False
+    if concrete == "string":
+        if field_name_lower == "id" or field_name_lower.endswith("id"):
+            return f"mock_{field_name}_{record_index + 1}"
+        if field_format == "date":
+            return _MOCK_DATES[record_index % len(_MOCK_DATES)]
+        if field_format == "date-time" or "date" in field_name_lower:
+            return f"{_MOCK_DATES[record_index % len(_MOCK_DATES)]}T10:00:00Z"
+        if field_format == "uri" or "url" in field_name_lower or "link" in field_name_lower:
+            return f"https://example.com/{field_name}"
+        if "email" in field_name_lower:
+            return f"mock_{field_name}@example.com"
+        return f"mock_{field_name}"
+    if concrete == "object":
+        return {
+            name: _generate_value(prop_schema, name, record_index)
+            for name, prop_schema in schema.get("properties", {}).items()
+        }
+    if concrete == "array":
+        items_schema = schema.get("items", {})
+        return [_generate_value(items_schema, f"{field_name}_item", record_index)]
+
+    return None
+
+
+def _load_schema_file(schema_path: Path) -> dict:
+    """Load and parse a JSON schema file."""
+    try:
+        with open(schema_path) as schema_file:
+            return json.load(schema_file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+def _generate_fixtures() -> dict:
+    """Load all schemas and generate representative records."""
+    fixtures = {}
+    if not _SCHEMA_DIR.exists():
+        return fixtures
+
+    for schema_file in sorted(_SCHEMA_DIR.glob("*.json")):
+        stream_name = schema_file.stem
+        schema = _load_schema_file(schema_file)
+        if not schema or "properties" not in schema:
+            continue
+
+        records = []
+        for i in range(3):
+            record = {
+                field_name: _generate_value(field_schema, field_name, i)
+                for field_name, field_schema in schema.get("properties", {}).items()
+            }
+            records.append(record)
+        fixtures[stream_name] = records
+
+    return fixtures
+
+
+FIXTURES = _generate_fixtures()
+
+
+class MockOutbrainBaseTest(BaseCase):
+    """Integration-test base that runs the tap against mocked HTTP responses."""
+
+    start_date = "2024-01-01T00:00:00Z"
+    bookmark_format = "%Y-%m-%d"
+    PARENT_STREAM = "parent-stream"
+
+    PRIMARY_KEYS = "table-key-properties"
+    REPLICATION_METHOD = "forced-replication-method"
+    REPLICATION_KEYS = "valid-replication-keys"
+    RESPECTS_START_DATE = "table-start-date-usage"
+
+    INCREMENTAL = "INCREMENTAL"
+    FULL_TABLE = "FULL_TABLE"
+
+    @staticmethod
+    def tap_name() -> str:
+        return "tap-outbrain"
+
+    @staticmethod
+    def get_type() -> str:
+        return "platform.outbrain"
+
+    def get_properties(self, original: bool = True) -> dict:
+        return {
+            "start_date": self.start_date,
+        }
+
+    def get_credentials(self) -> dict:
+        return {
+            "account_id": "mock_account_001",
+            "username": "mock@example.com",
+            "password": "mock_password",
+            "access_token": "mock_access_token",
+        }
+
+    @classmethod
+    def expected_metadata(cls) -> dict:
+        return {
+            "campaign": {
+                cls.PRIMARY_KEYS: {"id"},
+                cls.REPLICATION_METHOD: cls.FULL_TABLE,
+                cls.REPLICATION_KEYS: set(),
+                cls.RESPECTS_START_DATE: False,
+                cls.API_LIMIT: 1,
+            },
+            "campaign_performance": {
+                cls.PRIMARY_KEYS: {"campaignId", "fromDate"},
+                cls.REPLICATION_METHOD: cls.INCREMENTAL,
+                cls.REPLICATION_KEYS: {"fromDate"},
+                cls.RESPECTS_START_DATE: True,
+                cls.LOOK_BACK_WINDOW: timedelta(days=2),
+                cls.PARENT_STREAM: "campaign",
+                cls.API_LIMIT: 10,
+            },
+        }
+
+    @classmethod
+    def expected_stream_names(cls) -> set:
+        return set(cls.expected_metadata().keys())
+
+    def expected_replication_method(self, stream=None) -> dict:
+        replication_method = {
+            table: properties.get(self.REPLICATION_METHOD, None)
+            for table, properties in self.expected_metadata().items()
+        }
+        if stream is None:
+            return replication_method
+        return replication_method[stream]
+
+    def expected_lookback_window(self, stream=None):
+        lookback = {
+            "campaign": timedelta(days=0),
+            "campaign_performance": timedelta(days=2),
+        }
+        if stream is None:
+            return lookback
+        return lookback[stream]
+
+    def _build_mock_request(self):
+        """Return a side_effect callable for patching tap_outbrain.request."""
+
+        def _side_effect(url, access_token, params=None):
+            import datetime as dt
+            from unittest.mock import MagicMock
+
+            params = params or {}
+            response = MagicMock()
+
+            def _as_date_string(value, fallback="2024-01-01"):
+                if value is None:
+                    return fallback
+                return str(value).split("T", 1)[0]
+
+            if "/campaigns" in url:
+                campaigns = FIXTURES.get("campaign", [])
+                response.json.return_value = {
+                    "campaigns": campaigns,
+                    "totalCount": len(campaigns),
+                }
+                return response
+
+            if "/periodic" in url or "performance" in url:
+                perf_template = (FIXTURES.get("campaign_performance") or [{}])[0]
+
+                from_date_str = _as_date_string(params.get("from", params.get("to")))
+                to_date_str = _as_date_string(params.get("to", params.get("from")))
+
+                try:
+                    from_date_obj = dt.datetime.strptime(from_date_str, "%Y-%m-%d")
+                    to_date_obj = dt.datetime.strptime(to_date_str, "%Y-%m-%d")
+                except Exception:
+                    from_date_obj = dt.datetime(2024, 1, 1)
+                    to_date_obj = from_date_obj
+
+                if to_date_obj < from_date_obj:
+                    from_date_obj, to_date_obj = to_date_obj, from_date_obj
+
+                span_days = (to_date_obj - from_date_obj).days + 1
+                record_count = max(1, min(span_days, 30))
+                results = []
+                for i in range(record_count):
+                    record_date = from_date_obj + dt.timedelta(days=i)
+                    record_from_date = record_date.strftime("%Y-%m-%d")
+                    metrics = {}
+                    for key, value in perf_template.items():
+                        if key in ("campaignId", "fromDate"):
+                            continue
+                        if key in {"impressions", "clicks", "conversions"}:
+                            metrics[key] = str(int(value))
+                        else:
+                            metrics[key] = str(value)
+
+                    results.append(
+                        {
+                            "metadata": {"fromDate": record_from_date},
+                            "metrics": metrics,
+                        }
+                    )
+
+                response.json.return_value = {
+                    "totalResults": len(results),
+                    "results": results,
+                }
+                return response
+
+            response.json.return_value = {}
+            return response
+
+        return _side_effect

@@ -240,7 +240,7 @@ class TestSyncCampaignPage(unittest.TestCase):
     @patch('tap_outbrain.sync_campaign_performance')
     @patch('singer.write_record')
     def test_skips_sync_when_campaign_performance_not_selected(self, mock_write_record, mock_sync_perf):
-        """When `campaigns` not in selected_streams, `campaign_performance` sync is skipped."""
+        """Campaign records are still emitted when performance stream is not selected."""
         campaign_page = {'campaigns': [{'id': 'c1', 'name': 'C1'}]}
         selected_streams = ['campaign']  # campaign_performance absent
 
@@ -248,7 +248,10 @@ class TestSyncCampaignPage(unittest.TestCase):
                            campaign_page, selected_streams)
 
         mock_sync_perf.assert_not_called()
-        mock_write_record.assert_not_called()
+        mock_write_record.assert_called_once()
+        args, kwargs = mock_write_record.call_args
+        self.assertEqual(args[0], 'campaign')
+        self.assertEqual(args[1]['id'], 'c1')
 
     @patch('tap_outbrain.sync_campaign_performance')
     @patch('singer.write_record')

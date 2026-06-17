@@ -21,7 +21,7 @@ def _is_mock_mode() -> bool:
     return not has_live_creds
 
 if _is_mock_mode():
-    from mock_base import MockOutbrainBaseTest as OutbrainBaseTest
+    from _mock_tap_tester import MockOutbrainBaseTest as OutbrainBaseTest
 else:
     from tap_tester import connections, menagerie, runner  # noqa: F401
     from tap_tester.base_suite_tests.base_case import BaseCase
