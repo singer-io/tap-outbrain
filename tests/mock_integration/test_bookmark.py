@@ -1,4 +1,4 @@
-"""Live integration tests - verify bookmark / state behaviour for tap-outbrain.
+"""Mock integration tests - verify bookmark / state behaviour for tap-outbrain.
 
 tap-outbrain uses `campaign_performance` as its only INCREMENTAL stream.
 Bookmarks are stored in state as:

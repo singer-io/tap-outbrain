@@ -52,7 +52,7 @@ class OutbrainBaseTest(unittest.TestCase):
     def _tap_root():
         """Absolute path to the tap-outbrain package root."""
         return os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..", "tap_outbrain")
+            os.path.join(os.path.dirname(__file__), "..", "..", "tap_outbrain")
         )
 
     @classmethod
