@@ -9,11 +9,11 @@ class BaseStream:
     """
     Abstract base class for all tap-outbrain streams.
 
-    Subclasses set class-level attributes describing the stream and may
-    override ``check_access()`` to probe the appropriate API endpoint.
-    Child streams (those with ``parent`` set) always return ``True`` from
-    the default ``check_access()`` implementation; their accessibility is
-    governed by their parent stream's check.
+    Subclasses set class-level attributes describing the stream and must
+    implement ``get_probe_url()`` to provide their API endpoint.  Child
+    streams (those with ``parent`` set) always return ``True`` from
+    ``check_access()``; their accessibility is governed by the parent
+    stream's check.
     """
 
     name = None
@@ -28,9 +28,13 @@ class BaseStream:
     def get_probe_url(self):
         """
         Return the URL used by check_access() to probe API read access.
-        Parent stream subclasses must override this to return their endpoint.
+        Must be implemented by every concrete parent stream subclass.
+        Child streams never reach this method (check_access returns True
+        early), so they do not need to override it.
         """
-        return None
+        raise NotImplementedError(
+            f"{self.__class__.__name__} must implement get_probe_url()"
+        )
 
     def check_access(self) -> bool:
         """
