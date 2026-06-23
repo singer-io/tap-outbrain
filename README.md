@@ -30,6 +30,21 @@ docker build -f Dockerfile .
 docker -v "$(pwd)":/usr/src/tap-outbrain run <image-id>
 ```
 
+### Integration Test Modes
+
+Use the mode-aware test runner to choose between live and mock suites:
+
+```bash
+# Live integration suite (tests/test_*.py)
+python tests/run_integration_tests.py --mode live
+
+# Mock-only suite (tests/mock_integration)
+python tests/run_integration_tests.py --mode mock
+
+# Auto mode: live when credentials exist, otherwise mock
+python tests/run_integration_tests.py --mode auto
+```
+
 ### Gotchas
 
 - Outbrain only allows two calls to the `/login` API per hour. This integration calls that API on every run to generate a new access token. This means that this integration cannot be run more frequently than twice per hour. The access token could be stored in the state file with a timestamp, but at present secure state file storage is not implemented.

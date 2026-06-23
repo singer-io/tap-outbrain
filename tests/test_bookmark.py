@@ -1,3 +1,20 @@
+import os
+import unittest
+
+mode = os.environ.get("INTEGRATION_TEST_MODE", "auto").lower()
+if mode == "auto":
+    required_env = (
+        "TAP_OUTBRAIN_ACCOUNT_ID",
+        "TAP_OUTBRAIN_USERNAME",
+        "TAP_OUTBRAIN_PASSWORD",
+        "TAP_OUTBRAIN_ACCESS_TOKEN",
+    )
+    has_live_creds = all(os.environ.get(var) for var in required_env)
+    mode = "live" if has_live_creds else "mock"
+
+if mode == "mock":
+    raise unittest.SkipTest("Root tests run in live mode. Use tests/mock_integration/ for mock tests.")
+
 from base import OutbrainBaseTest
 from tap_tester import menagerie
 from tap_tester.base_suite_tests.bookmark_test import BookmarkTest
