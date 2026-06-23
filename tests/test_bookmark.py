@@ -10,7 +10,6 @@ from singer import metadata as singer_metadata
 
 from .base import OutbrainBaseTest
 
-from tap_outbrain.discover import discover
 from tap_outbrain import get_date_ranges
 
 
@@ -94,7 +93,7 @@ class OutbrainBookmarkTest(OutbrainBaseTest):
 
     def test_campaign_performance_is_incremental_in_metadata(self):
         """Singer metadata confirms campaign_performance uses INCREMENTAL replication."""
-        catalog = discover()
+        catalog = self._discover_catalog()
         cp = next(s for s in catalog.streams if s.tap_stream_id == "campaign_performance")
         mdata_map = singer_metadata.to_map(cp.metadata)
         method = singer_metadata.get(mdata_map, (), "forced-replication-method")
@@ -102,7 +101,7 @@ class OutbrainBookmarkTest(OutbrainBaseTest):
 
     def test_campaign_is_full_table_in_metadata(self):
         """Singer metadata confirms campaign uses FULL_TABLE replication."""
-        catalog = discover()
+        catalog = self._discover_catalog()
         c = next(s for s in catalog.streams if s.tap_stream_id == "campaign")
         mdata_map = singer_metadata.to_map(c.metadata)
         method = singer_metadata.get(mdata_map, (), "forced-replication-method")
@@ -110,7 +109,7 @@ class OutbrainBookmarkTest(OutbrainBaseTest):
 
     def test_campaign_performance_valid_replication_key_is_from_date(self):
         """valid-replication-keys for campaign_performance is 'fromDate'."""
-        catalog = discover()
+        catalog = self._discover_catalog()
         cp = next(s for s in catalog.streams if s.tap_stream_id == "campaign_performance")
         mdata_map = singer_metadata.to_map(cp.metadata)
         rep_keys = singer_metadata.get(mdata_map, (), "valid-replication-keys")

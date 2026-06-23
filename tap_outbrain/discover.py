@@ -63,7 +63,7 @@ def _prune_inaccessible_children(schemas: dict, field_metadata: dict) -> None:
             field_metadata.pop(name, None)
 
 
-def discover(client=None) -> Catalog:
+def discover(client) -> Catalog:
     """
     Run the discovery mode, prepare the catalog file and return the catalog.
 
@@ -73,8 +73,7 @@ def discover(client=None) -> Catalog:
     """
     schemas, field_metadata = get_schemas()
 
-    if client is not None:  # Checking for client as integration tests are written without client in discovery
-        _apply_access_checks(client, schemas, field_metadata)
+    _apply_access_checks(client, schemas, field_metadata)
 
     catalog = Catalog([])
     for stream_name, schema_dict in schemas.items():

@@ -25,32 +25,34 @@ class BaseStream:
     def __init__(self, client=None):
         self.client = client
 
+    def get_probe_url(self):
+        """
+        Return the URL used by check_access() to probe API read access.
+        Parent stream subclasses must override this to return their endpoint.
+        """
+        return None
+
     def check_access(self) -> bool:
         """
         Verify that the API credentials have read access to this stream.
-        Returns True if accessible, False if a 403 Forbidden error is raised.
-        Child streams always return True (access is governed by the parent check).
-        """
-        return True
 
+        Child streams (those with ``parent`` set) always return True — their
+        accessibility is governed by the parent stream's check, so no API
+        probe is needed.
 
-class Campaign(BaseStream):
-    name = "campaign"
-    key_properties = ["id"]
-    replication_keys = None
-    replication_method = "FULL_TABLE"
+        Parent streams make a lightweight GET request to ``get_probe_url()``
+        and return False when the API responds with HTTP 403 Forbidden.
+        """
+        if self.parent:
+            return True
 
-    def check_access(self) -> bool:
-        """
-        Probe the campaigns endpoint to verify read access.
-        Returns False when the API responds with HTTP 403 Forbidden.
-        """
-        account_id = self.client.config.get("account_id")
+        url = self.get_probe_url()
         access_token = self.client.config.get("access_token")
         headers = {"OB-TOKEN-V1": access_token}
-        url = f"{OUTBRAIN_API_BASE}/marketers/{account_id}/campaigns"
         try:
-            self.client.make_request("GET", url, headers=headers, params={"limit": 1})
+            self.client.make_request(
+                "GET", url, headers=headers, params={"limit": 1}
+            )
             return True
         except OutbrainForbiddenError as exc:
             LOGGER.warning(
@@ -61,6 +63,18 @@ class Campaign(BaseStream):
             return False
 
 
+class Campaign(BaseStream):
+    name = "campaign"
+    key_properties = ["id"]
+    replication_keys = None
+    replication_method = "FULL_TABLE"
+
+    def get_probe_url(self):
+        """Return the campaigns endpoint for this marketer account."""
+        account_id = self.client.config.get("account_id")
+        return f"{OUTBRAIN_API_BASE}/marketers/{account_id}/campaigns"
+
+
 class CampaignPerformance(BaseStream):
     name = "campaign_performance"
     key_properties = ["campaignId", "fromDate"]
@@ -68,7 +82,8 @@ class CampaignPerformance(BaseStream):
     replication_keys = "fromDate"
     replication_method = "INCREMENTAL"
     parent = "campaign"
-    # check_access() inherited from BaseStream always returns True for child streams
+    # check_access() in BaseStream returns True for child streams.
+    # No override needed here.
 
 
 STREAMS = {

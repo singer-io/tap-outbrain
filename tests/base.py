@@ -98,13 +98,19 @@ class OutbrainBaseTest(unittest.TestCase):
         }
 
     @staticmethod
+    def _discover_catalog():
+        """Return a discovery catalog using a mock client and no access probes."""
+        with patch("tap_outbrain.discover._apply_access_checks", return_value=None):
+            return discover(client=MagicMock())
+
+    @staticmethod
     def _make_selected_catalog():
         """Return a discover() catalog with all streams marked as selected.
 
         Singer's ``catalog.get_selected_streams()`` only yields streams whose
         root metadata entry (breadcrumb == ()) contains ``selected: True``.
         """
-        catalog = discover()
+        catalog = OutbrainBaseTest._discover_catalog()
         for entry in catalog.streams:
             for m in entry.metadata:
                 if not m.get("breadcrumb"):

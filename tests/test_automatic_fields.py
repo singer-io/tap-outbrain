@@ -6,8 +6,6 @@ from singer import metadata
 
 from .base import OutbrainBaseTest
 
-from tap_outbrain.discover import discover
-
 
 class OutbrainAutomaticFieldsTest(OutbrainBaseTest):
     """Primary-key and replication-key fields must always be replicated."""
@@ -18,7 +16,7 @@ class OutbrainAutomaticFieldsTest(OutbrainBaseTest):
     def _get_automatic_fields(self, stream_name: str) -> set:
         """Return the set of field names that have 'automatic' inclusion for a stream."""
         # Use raw catalog (not selected) for metadata inspection
-        catalog = discover()
+        catalog = self._discover_catalog()
         stream = next(s for s in catalog.streams if s.tap_stream_id == stream_name)
         mdata_map = metadata.to_map(stream.metadata)
         pk = set(metadata.get(mdata_map, (), "table-key-properties") or [])
@@ -40,7 +38,7 @@ class OutbrainAutomaticFieldsTest(OutbrainBaseTest):
 
     def test_campaign_key_has_automatic_inclusion_metadata(self):
         """'id' in campaign must carry inclusion=automatic in Singer metadata."""
-        catalog = discover()
+        catalog = self._discover_catalog()
         campaign = next(s for s in catalog.streams if s.tap_stream_id == "campaign")
         mdata_map = metadata.to_map(campaign.metadata)
         self.assertEqual(
@@ -50,7 +48,7 @@ class OutbrainAutomaticFieldsTest(OutbrainBaseTest):
 
     def test_campaign_performance_keys_have_automatic_inclusion_metadata(self):
         """campaignId and fromDate in campaign_performance must be 'automatic'."""
-        catalog = discover()
+        catalog = self._discover_catalog()
         cp = next(s for s in catalog.streams if s.tap_stream_id == "campaign_performance")
         mdata_map = metadata.to_map(cp.metadata)
         for field in ("campaignId", "fromDate"):
@@ -63,7 +61,7 @@ class OutbrainAutomaticFieldsTest(OutbrainBaseTest):
 
     def test_non_key_campaign_fields_have_available_inclusion(self):
         """Non-key campaign fields (name, budget, cpc, …) must be 'available'."""
-        catalog = discover()
+        catalog = self._discover_catalog()
         campaign = next(s for s in catalog.streams if s.tap_stream_id == "campaign")
         mdata_map = metadata.to_map(campaign.metadata)
         for field in ("name", "campaignOnAir", "enabled", "cpc"):
@@ -75,7 +73,7 @@ class OutbrainAutomaticFieldsTest(OutbrainBaseTest):
 
     def test_non_key_performance_fields_have_available_inclusion(self):
         """Non-key performance fields (impressions, clicks, …) must be 'available'."""
-        catalog = discover()
+        catalog = self._discover_catalog()
         cp = next(s for s in catalog.streams if s.tap_stream_id == "campaign_performance")
         mdata_map = metadata.to_map(cp.metadata)
         for field in ("impressions", "clicks", "spend", "ctr", "cpa"):

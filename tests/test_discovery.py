@@ -1,22 +1,20 @@
 """Catalog structure tests for tap-outbrain stream discovery.
 
-Calls tap_outbrain.discover.discover() directly — no HTTP calls required
-because discovery only reads local schema JSON files.  These tests are
-valid in both live and mock environments.
+Uses the shared test helper to run discovery with a mock client and
+without API access probes. These tests remain API-free and validate
+catalog and metadata structure only.
 """
 
 from singer import metadata
 
 from .base import OutbrainBaseTest
 
-from tap_outbrain.discover import discover
-
 
 class OutbrainDiscoveryTest(OutbrainBaseTest):
-    """Verify discover() returns the correct catalog without any API calls."""
+    """Verify discovery returns the correct catalog without API calls."""
 
     def _catalog(self):
-        return discover()
+        return self._discover_catalog()
 
     def test_discovery_returns_expected_streams(self):
         """All expected streams are present in the catalog."""
