@@ -242,7 +242,7 @@ class OutbrainMockBaseTest(unittest.TestCase):
                 "do_sync(catalog, config, state)\n"
             ).format(
                 repo_root,
-                cls._server_base_url,
+                self._server_base_url,
                 config_path,
                 state_path,
                 catalog_path,

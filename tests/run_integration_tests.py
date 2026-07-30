@@ -59,6 +59,15 @@ def _has_live_credentials() -> bool:
     return all(os.environ.get(var) for var in required_env)
 
 
+def _has_tap_tester() -> bool:
+    """Check if tap_tester is importable in the current Python environment."""
+    try:
+        import tap_tester  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
 def _resolve_mode(requested_mode: str):
     """Determine which mode to run and return (mode, message)."""
     has_live_creds = _has_live_credentials()
@@ -72,7 +81,9 @@ def _resolve_mode(requested_mode: str):
         return "mock", "Live mode requested but Outbrain credentials are missing; running mock tests instead."
 
     if has_live_creds:
-        return "live", None
+        if _has_tap_tester():
+            return "live", None
+        return "mock", "tap_tester not available in current environment; running mock tests instead."
 
     return "mock", "Outbrain credentials not found; running mock tests."
 
