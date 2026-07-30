@@ -45,6 +45,7 @@ class OutbrainMockBaseTest(unittest.TestCase):
             "id": campaign_id,
             "name": f"Campaign {campaign_id}",
             "campaignOnAir": True,
+            "onAirReason": None,
             "enabled": True,
             "budget": {
                 "id": f"budget_{campaign_id}",
@@ -63,15 +64,20 @@ class OutbrainMockBaseTest(unittest.TestCase):
     @classmethod
     def _mock_performance_response(cls, campaign_id="c001", from_date="2024-01-01", **overrides):
         """Generate mock performance response for campaign_performance stream."""
+        # parse_performance() reads fromDate from result['metadata']['fromDate']
+        # and numeric fields from result['metrics'][*] (values must be strings).
         performance = {
-            "campaignId": campaign_id,
-            "fromDate": from_date,
-            "impressions": 10000,
-            "clicks": 500,
-            "ctr": 0.05,
-            "spend": 250.0,
-            "conversions": 50,
-            "conversionRate": 0.10,
+            "metadata": {"fromDate": from_date},
+            "metrics": {
+                "impressions": "10000",
+                "clicks": "500",
+                "ctr": "0.05",
+                "spend": "250.0",
+                "ecpc": "0.5",
+                "conversions": "50",
+                "conversionRate": "0.10",
+                "cpa": "5.0",
+            },
         }
         performance.update(overrides)
         return performance

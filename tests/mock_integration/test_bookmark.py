@@ -31,11 +31,11 @@ class OutbrainMockBookmarkTest(OutbrainMockBaseTest):
         ]
         self.assertGreater(len(state_messages), 0, "No STATE messages emitted")
 
-        # Last state should contain campaign_performance bookmarks
+        # The tap writes state as {"campaign_performance": {<campaign_id>: <date>}}
+        # (no nested "bookmarks" wrapper).
         final_state = state_messages[-1].get("value", {})
-        self.assertIn("bookmarks", final_state, "No bookmarks in final state")
         self.assertIn(
-            "campaign_performance", final_state["bookmarks"],
+            "campaign_performance", final_state,
             "campaign_performance bookmark missing from state"
         )
 
