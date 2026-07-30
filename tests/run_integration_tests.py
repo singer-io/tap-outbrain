@@ -120,25 +120,27 @@ Examples:
     if message:
         print(f"INFO: {message}")
 
+    tests_dir = Path(__file__).resolve().parent
+
     if mode == "live":
         test_files = _live_test_files()
-        env_var = "INTEGRATION_TEST_MODE"
+        pythonpath_dir = str(tests_dir)
     else:
         test_files = _mock_test_files()
-        env_var = "INTEGRATION_TEST_MODE"
+        pythonpath_dir = str(tests_dir / "mock_integration")
 
-    # Set environment variable for test execution
+    # Set environment variable for test execution and add tests dir to PYTHONPATH
+    # so bare `from base import ...` imports resolve correctly
     env = os.environ.copy()
-    env[env_var] = mode
+    env["INTEGRATION_TEST_MODE"] = mode
+    existing_path = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = pythonpath_dir + (":" + existing_path if existing_path else "")
 
     print(f"\nRunning {mode.upper()} tests...")
     print(f"Test files: {', '.join(test_files)}\n")
 
-    # Run tests
-    cmd = [sys.executable, "-m", "unittest"] + [
-        f.replace("/", ".").replace(".py", "")
-        for f in test_files
-    ]
+    # Run tests using pytest for better output; fall back to unittest
+    cmd = [sys.executable, "-m", "pytest"] + test_files + ["-v"]
 
     result = subprocess.run(cmd, env=env)
     sys.exit(result.returncode)

@@ -228,11 +228,13 @@ class OutbrainMockBaseTest(unittest.TestCase):
             driver = (
                 "import json, sys\n"
                 "sys.path.insert(0, '{}')\n"
+                "import singer\n"
                 "from tap_outbrain import do_sync\n"
-                "with open('{}', 'r') as c, open('{}', 'r') as s:\n"
+                "with open('{}', 'r') as c, open('{}', 'r') as s, open('{}', 'r') as cat:\n"
                 "    config = json.load(c)\n"
                 "    state = json.load(s)\n"
-                "do_sync(config, '{}', state)\n"
+                "    catalog = singer.Catalog.from_dict(json.load(cat))\n"
+                "do_sync(catalog, config, state)\n"
             ).format(
                 repo_root,
                 config_path,
