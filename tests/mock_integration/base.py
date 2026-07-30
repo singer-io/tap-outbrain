@@ -52,6 +52,7 @@ class OutbrainMockBaseTest(unittest.TestCase):
                 "currency": "USD",
                 "amountSpent": 500.0,
                 "creationTime": "2024-01-01T00:00:00+00:00",
+                "lastModified": "2024-01-02T00:00:00+00:00",
                 "startDate": "2024-01-01",
             },
             "cpc": 0.5,
@@ -97,7 +98,7 @@ class OutbrainMockBaseTest(unittest.TestCase):
 
                 # Mock /login endpoint
                 if parsed.path.endswith("/login"):
-                    body = json.dumps({"access_token": "mock_token_123"}).encode("utf-8")
+                    body = json.dumps({"OB-TOKEN-V1": "mock_token_123"}).encode("utf-8")
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
                     self.send_header("Content-Length", str(len(body)))
@@ -203,21 +204,26 @@ class OutbrainMockBaseTest(unittest.TestCase):
             with open(state_path, "w", encoding="utf-8") as state_file:
                 json.dump(run_state, state_file)
 
-            # Create a minimal selected catalog
+            # Create a fully-selected catalog (mark all streams as selected)
             from tap_outbrain.discover import discover
             catalog = discover()
-            catalog_dict = {
-                "streams": [
-                    {
-                        "tap_stream_id": stream.tap_stream_id,
-                        "stream": stream.stream,
-                        "schema": stream.schema.to_dict(),
-                        "key_properties": stream.key_properties,
-                        "metadata": stream.metadata,
-                    }
-                    for stream in catalog.streams
-                ]
-            }
+            catalog_streams = []
+            for stream in catalog.streams:
+                # Set selected=true on the root breadcrumb entry
+                metadata = []
+                for entry in stream.metadata:
+                    entry_copy = {"breadcrumb": entry["breadcrumb"], "metadata": dict(entry["metadata"])}
+                    if entry["breadcrumb"] == [] or entry["breadcrumb"] == ():
+                        entry_copy["metadata"]["selected"] = True
+                    metadata.append(entry_copy)
+                catalog_streams.append({
+                    "tap_stream_id": stream.tap_stream_id,
+                    "stream": stream.stream,
+                    "schema": stream.schema.to_dict(),
+                    "key_properties": stream.key_properties,
+                    "metadata": metadata,
+                })
+            catalog_dict = {"streams": catalog_streams}
             with open(catalog_path, "w", encoding="utf-8") as catalog_file:
                 json.dump(catalog_dict, catalog_file)
 
@@ -237,8 +243,11 @@ class OutbrainMockBaseTest(unittest.TestCase):
                 "from tap_outbrain import do_sync\n"
                 "with open('{}', 'r') as c, open('{}', 'r') as s, open('{}', 'r') as cat:\n"
                 "    config = json.load(c)\n"
-                "    state = json.load(s)\n"
+                "    raw_state = json.load(s)\n"
                 "    catalog = singer.Catalog.from_dict(json.load(cat))\n"
+                "state = raw_state if raw_state else {{'campaign_performance': {{}}}}\n"
+                "if 'campaign_performance' not in state:\n"
+                "    state['campaign_performance'] = {{}}\n"
                 "do_sync(catalog, config, state)\n"
             ).format(
                 repo_root,
