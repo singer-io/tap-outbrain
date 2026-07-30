@@ -18,7 +18,7 @@ class _ThreadingTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     daemon_threads = True
 
 
-class OutbrainMockBaseTest(unittest.TestCase):
+class OutbrainBaseTest(unittest.TestCase):
     """Base class for mock integration tests with embedded API server."""
 
     _server = None
