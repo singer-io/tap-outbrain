@@ -1,392 +1,287 @@
-"""Base class for tap-outbrain mock integration tests."""
+"""Base class for tap-outbrain mock integration tests with mock server."""
 import copy
+import datetime
+import http.server
 import json
 import os
+import socketserver
+import sys
+import tempfile
+import threading
 import unittest
-from unittest.mock import MagicMock, patch
-
-import tap_outbrain
-from tap_outbrain.discover import discover
+from urllib.parse import parse_qs, urlparse
 
 
-def _resolve_mode() -> str:
-    mode = os.environ.get("INTEGRATION_TEST_MODE", "auto").lower()
-    if mode in {"live", "mock"}:
-        return mode
-
-    required_env = (
-        "TAP_OUTBRAIN_ACCOUNT_ID",
-        "TAP_OUTBRAIN_USERNAME",
-        "TAP_OUTBRAIN_PASSWORD",
-        "TAP_OUTBRAIN_ACCESS_TOKEN",
-    )
-    has_live_creds = bool(os.environ.get("TAP_OUTBRAIN_API_CREDS")) or all(
-        os.environ.get(var) for var in required_env
-    )
-    return "live" if has_live_creds else "mock"
+class _ThreadingTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    """Thread pool TCP server for mock API."""
+    allow_reuse_address = True
+    daemon_threads = True
 
 
-class OutbrainBaseTest(unittest.TestCase):
-    """Shared helpers and metadata for all tap-outbrain mock integration tests."""
+class OutbrainMockBaseTest(unittest.TestCase):
+    """Base class for mock integration tests with embedded API server."""
 
-    PRIMARY_KEYS = "primary_keys"
-    REPLICATION_METHOD = "replication_method"
-    REPLICATION_KEYS = "replication_keys"
-    OBEYS_START_DATE = "obeys_start_date"
-    PARENT = "parent"
-
-    INCREMENTAL = "INCREMENTAL"
-    FULL_TABLE = "FULL_TABLE"
-    DEFAULT_START_DATE = "2024-01-01"
-
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        if _resolve_mode() != "mock":
-            raise unittest.SkipTest(
-                "Mock integration tests run only in mock mode. "
-                "Use root tests for live mode."
-            )
+    _server = None
+    _server_thread = None
+    _server_base_url = None
+    _server_calls = []
 
     @staticmethod
-    def _tap_root():
-        """Absolute path to the tap-outbrain package root."""
-        return os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..", "..", "tap_outbrain")
-        )
-
-    @classmethod
-    def _load_schema(cls, stream_name: str) -> dict:
-        """Load a schema JSON from the tap_outbrain/schemas/ directory."""
-        path = os.path.join(cls._tap_root(), "schemas", f"{stream_name}.json")
-        with open(path) as fh:
-            return json.load(fh)
+    def _now():
+        """Return current UTC time with no seconds/microseconds."""
+        return datetime.datetime.now(datetime.timezone.utc).replace(second=0, microsecond=0)
 
     @staticmethod
-    def get_mock_config(start_date=None) -> dict:
-        """Return a config dict with fake credentials — no real API calls.
-
-        access_token is provided so do_sync skips generate_token() entirely.
-        """
-        return {
-            "account_id": "test_account_001",
-            "username": "test@example.com",
-            "password": "test_password",
-            "access_token": "mock_access_token",
-            "start_date": start_date or "2024-01-01T00:00:00Z",
-        }
-
-    def setUp(self):
-        self.config = self.get_mock_config()
+    def _to_iso_datetime(value):
+        """Convert datetime to ISO format string."""
+        if isinstance(value, str):
+            return value
+        return value.isoformat() if hasattr(value, 'isoformat') else str(value)
 
     @classmethod
-    def expected_metadata(cls) -> dict:
-        """Expected streams and their key metadata attributes."""
-        return {
-            "campaign": {
-                cls.PRIMARY_KEYS: {"id"},
-                cls.REPLICATION_METHOD: cls.FULL_TABLE,
-                cls.REPLICATION_KEYS: set(),
-                cls.OBEYS_START_DATE: False,
-            },
-            "campaign_performance": {
-                cls.PRIMARY_KEYS: {"campaignId", "fromDate"},
-                cls.REPLICATION_METHOD: cls.INCREMENTAL,
-                cls.REPLICATION_KEYS: {"fromDate"},
-                cls.OBEYS_START_DATE: True,
-                cls.PARENT: "campaign",
-            },
-        }
-
-    @classmethod
-    def expected_stream_names(cls) -> set:
-        return set(cls.expected_metadata().keys())
-
-    @classmethod
-    def expected_primary_keys(cls) -> dict:
-        return {
-            s: meta[cls.PRIMARY_KEYS]
-            for s, meta in cls.expected_metadata().items()
-        }
-
-    @classmethod
-    def expected_replication_keys(cls) -> dict:
-        return {
-            s: meta[cls.REPLICATION_KEYS]
-            for s, meta in cls.expected_metadata().items()
-        }
-
-    @classmethod
-    def expected_replication_method(cls) -> dict:
-        return {
-            s: meta[cls.REPLICATION_METHOD]
-            for s, meta in cls.expected_metadata().items()
-        }
-
-    @staticmethod
-    def _make_selected_catalog():
-        """Return a discover() catalog with all streams marked as selected.
-
-        Singer's ``catalog.get_selected_streams()`` only yields streams whose
-        root metadata entry (breadcrumb == ()) contains ``selected: True``.
-        """
-        catalog = discover()
-        for entry in catalog.streams:
-            for m in entry.metadata:
-                if not m.get("breadcrumb"):
-                    m["metadata"]["selected"] = True
-        return catalog
-
-    @staticmethod
-    def make_campaign_record(campaign_id, **overrides):
-        """Return a campaign dict as returned by the Outbrain /campaigns endpoint."""
-        record = {
+    def _mock_campaign_response(cls, campaign_id="c001", **overrides):
+        """Generate mock campaign response matching Outbrain API format."""
+        campaign = {
             "id": campaign_id,
             "name": f"Campaign {campaign_id}",
             "campaignOnAir": True,
-            "onAirReason": None,
             "enabled": True,
             "budget": {
                 "id": f"budget_{campaign_id}",
-                "name": f"Budget {campaign_id}",
-                "shared": False,
                 "amount": 1000.0,
                 "currency": "USD",
-                "amountRemaining": 500.0,
                 "amountSpent": 500.0,
-                # parse_campaign() calls parse_datetime() on these — must be ISO strings
                 "creationTime": "2024-01-01T00:00:00+00:00",
                 "lastModified": "2024-01-02T00:00:00+00:00",
                 "startDate": "2024-01-01",
-                "endDate": None,
-                "runForever": True,
-                "type": "daily",
-                "pacing": "automatic",
-                "dailyTarget": 100.0,
-                "maximumAmount": None,
             },
             "cpc": 0.5,
         }
-        record.update(overrides)
-        return record
+        campaign.update(overrides)
+        return campaign
 
-    @staticmethod
-    def make_performance_record(campaign_id, from_date, **overrides):
-        """Return a flat performance record dict (pre-API-response-transform format)."""
-        record = {
+    @classmethod
+    def _mock_performance_response(cls, campaign_id="c001", from_date="2024-01-01", **overrides):
+        """Generate mock performance response for campaign_performance stream."""
+        performance = {
             "campaignId": campaign_id,
             "fromDate": from_date,
-            "impressions": 1000,
-            "clicks": 50,
+            "impressions": 10000,
+            "clicks": 500,
             "ctr": 0.05,
-            "spend": 25.0,
-            "ecpc": 0.5,
-            "conversions": 5,
-            "conversionRate": 0.1,
-            "cpa": 5.0,
+            "spend": 250.0,
+            "conversions": 50,
+            "conversionRate": 0.10,
         }
-        record.update(overrides)
-        return record
+        performance.update(overrides)
+        return performance
 
-    def _collect_periodic_params(self, config=None, campaigns=None, initial_state=None):
-        """Run a mock sync and collect every ``params`` dict sent to /periodic requests.
+    @classmethod
+    def setUpClass(cls):
+        """Set up mock API server before running tests."""
+        super().setUpClass()
 
-        Test strategy
-        -------------
-        The outer-scope list ``periodic_params`` is captured by the inner
-        ``fake_request`` closure via Python's standard closure mechanism.
-        Closures hold a reference to mutable objects in the enclosing scope, so
-        every ``periodic_params.append(...)`` inside ``fake_request`` updates
-        the same list that is ultimately returned to callers — there is no
-        inconsistency or hidden shared state between test runs because each
-        invocation of ``_collect_periodic_params`` allocates a fresh
-        ``periodic_params = []`` list.
+        class _Handler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                """Handle GET requests to mock API."""
+                parsed = urlparse(self.path)
+                query = parse_qs(parsed.query)
+                auth = self.headers.get("Authorization")
 
-        The inner ``fake_request``:
-          * handles ``/campaigns`` requests for paginated campaign fetching;
-          * handles ``/periodic`` requests (the performance sink) and records
-            the full ``params`` dict so callers can assert on ``from``, ``to``,
-            ``campaignId``, etc.
-
-        Useful for start_date and bookmark tests that need to inspect the
-        ``from_date`` / ``to_date`` window the tap computes for each API call.
-        """
-
-        run_config = config or self.config
-        mock_campaigns = campaigns if campaigns is not None else [self.make_campaign_record("c001")]
-        state = copy.deepcopy(initial_state) if initial_state else {"campaign_performance": {}}
-        periodic_params = []
-
-        # WHY fake_request is defined here:
-        # tap_outbrain.request() is the single HTTP gateway used by the tap.
-        # By patching it with this inner function we intercept every outbound
-        # call without spawning a real HTTP connection.  Defining it inline
-        # (rather than as a class-level helper) lets it close over the local
-        # test fixtures (``mock_campaigns``, ``periodic_params``) without
-        # having to pass them as arguments, keeping the patch site clean.
-        #
-        # No inconsistency risk: ``periodic_params`` is freshly allocated on
-        # every call to ``_collect_periodic_params``; the closure holds a
-        # reference to *that* list only, so repeated test calls never share
-        # state.
-        def fake_request(url, access_token, params):
-            resp = MagicMock()
-            if "/campaigns" in url:
-                offset = params.get("offset", 0)
-                limit = params.get("limit", 50)
-                page = mock_campaigns[offset: offset + limit]
-                resp.json.return_value = {
-                    "campaigns": page,
-                    "totalCount": len(mock_campaigns),
-                }
-            elif "/periodic" in url:
-                periodic_params.append(dict(params))
-                from_d = params.get("from")
-                from_str = from_d.isoformat() if hasattr(from_d, "isoformat") else str(from_d)
-                cid = params.get("campaignId")
-                resp.json.return_value = {
-                    "totalResults": 1,
-                    "results": [{
-                        "metadata": {"fromDate": from_str},
-                        "metrics": {
-                            "impressions": "100", "clicks": "5", "ctr": "0.05",
-                            "spend": "10.0", "ecpc": "2.0", "conversions": "1",
-                            "conversionRate": "0.2", "cpa": "10.0",
-                        },
-                    }],
-                }
-            return resp
-
-        catalog = self._make_selected_catalog()
-        with patch("tap_outbrain.request", side_effect=fake_request), \
-             patch("singer.write_schema"), \
-             patch("singer.write_record"), \
-             patch("singer.write_state"), \
-             patch("time.sleep"):
-            tap_outbrain.do_sync(catalog, run_config, state)
-
-        return periodic_params
-
-    def _run_mock_sync(self, campaigns=None, perf_records_by_campaign=None,
-                       config=None, state=None):
-        """Run do_sync with a fully mocked HTTP layer and capture Singer output.
-
-        Test strategy
-        -------------
-        All outbound HTTP calls are intercepted by ``fake_request``.  Singer
-        output functions (``write_schema``, ``write_record``, ``write_state``)
-        are replaced with lightweight capture helpers that accumulate emitted
-        messages into ``captured``.  This lets integration tests make
-        assertions about:
-
-        * which SCHEMA messages were emitted (``captured["schemas"]``);
-        * which RECORD messages were emitted (``captured["records"]``);
-        * how the state evolved after each sync cycle (``captured["states"]``).
-
-        The ``fake_request`` inner function handles two URL patterns:
-          * ``/campaigns`` - returns paginated campaign fixtures so that the
-            tap's pagination logic can be exercised without a live API;
-          * ``/periodic``  - returns performance fixtures keyed by
-            ``campaign_id``; a minimal auto-generated record is used when no
-            fixture is provided for a campaign (prevents ``IndexError`` inside
-            ``sync_performance``).
-
-        Each invocation allocates independent ``captured`` and ``final_state``
-        objects, so tests are fully isolated from one another.
-
-        Parameters
-        ----------
-        campaigns :
-            List of campaign dicts (from make_campaign_record).  Pagination is
-            handled automatically — the fake request pages through the list.
-        perf_records_by_campaign :
-            Dict mapping campaign_id -> list of flat performance record dicts.
-            If a campaign has no entry, a default record is auto-generated per
-            date-range request (prevents IndexError in sync_performance).
-        config :
-            Override config; defaults to get_mock_config().
-        state :
-            Override initial state; defaults to {"campaign_performance": {}}.
-
-        Returns
-        -------
-        (captured, final_state)
-            captured  = {"schemas": {...}, "records": {...}, "states": [...]}
-            final_state = the mutated state dict after do_sync completes.
-        """
-
-        catalog = self._make_selected_catalog()
-        run_config = config or self.config
-        final_state = copy.deepcopy(state) if state is not None else {"campaign_performance": {}}
-        mock_campaigns = campaigns if campaigns is not None else []
-        perf_map = perf_records_by_campaign or {}
-
-        captured = {"schemas": {}, "records": {}, "states": []}
-
-        # WHY fake_request is defined here:
-        # tap_outbrain.request() is the tap's sole HTTP gateway.  Replacing it
-        # with this closure lets us control exactly what each endpoint returns
-        # without any real network calls.  The function is defined locally so
-        # it can close over ``mock_campaigns``, ``perf_map``, and ``captured``
-        # directly, which avoids threading those fixtures through additional
-        # arguments and keeps the unittest.mock.patch() call site simple.
-        #
-        # No inconsistency risk: every call to ``_run_mock_sync`` allocates
-        # its own fresh ``captured``, ``final_state``, ``mock_campaigns``, and
-        # ``perf_map`` objects.  The closure captures references to *those*
-        # objects only; no mutable state is shared across test invocations, so
-        # parallel or sequential test execution cannot produce cross-test
-        # pollution.
-        def fake_request(url, access_token, params):
-            resp = MagicMock()
-            if "/campaigns" in url:
-                offset = params.get("offset", 0)
-                limit = params.get("limit", 50)
-                page = mock_campaigns[offset: offset + limit]
-                resp.json.return_value = {
-                    "campaigns": page,
-                    "totalCount": len(mock_campaigns),
-                }
-            elif "/periodic" in url:
-                cid = params.get("campaignId")
-                records_for = perf_map.get(cid)
-                if not records_for:  # None or empty -> auto-generate to avoid IndexError
-                    from_d = params.get("from")
-                    from_str = (
-                        from_d.isoformat() if hasattr(from_d, "isoformat") else str(from_d)
-                    )
-                    records_for = [self.make_performance_record(cid, from_str)]
-                results = [
+                cls._server_calls.append(
                     {
-                        "metadata": {"fromDate": r["fromDate"]},
-                        "metrics": {
-                            k: str(v)
-                            for k, v in r.items()
-                            if k not in ("campaignId", "fromDate")
-                        },
+                        "path": parsed.path,
+                        "query": copy.deepcopy(query),
+                        "authorization": auth,
                     }
-                    for r in records_for
-                ]
-                resp.json.return_value = {
-                    "totalResults": len(results),
-                    "results": results,
-                }
-            return resp
+                )
 
-        def _cap_schema(stream_name, schema, **kwargs):
-            captured["schemas"][stream_name] = schema
+                # Mock /login endpoint
+                if parsed.path.endswith("/login"):
+                    body = json.dumps({"OB-TOKEN-V1": "mock_token_123"}).encode("utf-8")
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
 
-        def _cap_record(stream_name, record, **kwargs):
-            captured["records"].setdefault(stream_name, []).append(record)
+                # Mock /marketers/{id}/campaigns endpoint
+                if parsed.path.endswith("/campaigns"):
+                    campaigns = [
+                        cls._mock_campaign_response("c001"),
+                        cls._mock_campaign_response("c002"),
+                    ]
+                    body = json.dumps({"campaigns": campaigns, "totalCount": 2}).encode("utf-8")
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
 
-        def _cap_state(s):
-            captured["states"].append(copy.deepcopy(s))
+                # Mock /reports/marketers/{id}/periodic endpoint
+                if "/periodic" in parsed.path:
+                    from_param = query.get("from", [None])[0]
+                    if from_param:
+                        perf_date = str(from_param)
+                    else:
+                        perf_date = (cls._now() - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
 
-        with patch("tap_outbrain.request", side_effect=fake_request), \
-             patch("singer.write_schema", side_effect=_cap_schema), \
-             patch("singer.write_record", side_effect=_cap_record), \
-             patch("singer.write_state", side_effect=_cap_state), \
-             patch("time.sleep"):
-            tap_outbrain.do_sync(catalog, run_config, final_state)
+                    performances = [
+                        cls._mock_performance_response("c001", perf_date),
+                        cls._mock_performance_response("c002", perf_date),
+                    ]
+                    body = json.dumps({
+                        "results": performances,
+                        "totalResults": len(performances),
+                    }).encode("utf-8")
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
 
-        return captured, final_state
+                # Default 404
+                self.send_response(404)
+                self.end_headers()
+
+            def log_message(self, format_str, *args):
+                """Suppress server logging."""
+                return
+
+        cls._server = _ThreadingTCPServer(("127.0.0.1", 0), _Handler)
+        host, port = cls._server.server_address
+        cls._server_base_url = f"http://{host}:{port}"
+        cls._server_thread = threading.Thread(
+            target=cls._server.serve_forever, daemon=True
+        )
+        cls._server_thread.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        """Shut down mock server after tests."""
+        if cls._server:
+            cls._server.shutdown()
+            cls._server.server_close()
+        if cls._server_thread:
+            cls._server_thread.join(timeout=2)
+        super().tearDownClass()
+
+    def setUp(self):
+        """Clear server calls before each test."""
+        self.__class__._server_calls = []
+
+    @classmethod
+    def _default_config(cls, start_date=None):
+        """Return default mock config with fake Outbrain credentials."""
+        if not start_date:
+            start_date = (cls._now() - datetime.timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        return {
+            "account_id": "mock_account_001",
+            "username": "mock_user@example.com",
+            "password": "mock_password",
+            "start_date": start_date,
+            "base_url": cls._server_base_url,
+        }
+
+    def _run_mock_sync(self, config=None, state=None):
+        """Run tap-outbrain sync with mock configuration and return captured output."""
+        run_config = config or self._default_config()
+        run_state = state or {}
+        repo_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = os.path.join(tmpdir, "config.json")
+            state_path = os.path.join(tmpdir, "state.json")
+            catalog_path = os.path.join(tmpdir, "catalog.json")
+
+            with open(config_path, "w", encoding="utf-8") as config_file:
+                json.dump(run_config, config_file)
+
+            with open(state_path, "w", encoding="utf-8") as state_file:
+                json.dump(run_state, state_file)
+
+            # Create a fully-selected catalog (mark all streams as selected)
+            from tap_outbrain.discover import discover
+            catalog = discover()
+            catalog_streams = []
+            for stream in catalog.streams:
+                # Set selected=true on the root breadcrumb entry
+                metadata = []
+                for entry in stream.metadata:
+                    entry_copy = {"breadcrumb": entry["breadcrumb"], "metadata": dict(entry["metadata"])}
+                    if entry["breadcrumb"] == [] or entry["breadcrumb"] == ():
+                        entry_copy["metadata"]["selected"] = True
+                    metadata.append(entry_copy)
+                catalog_streams.append({
+                    "tap_stream_id": stream.tap_stream_id,
+                    "stream": stream.stream,
+                    "schema": stream.schema.to_dict(),
+                    "key_properties": stream.key_properties,
+                    "metadata": metadata,
+                })
+            catalog_dict = {"streams": catalog_streams}
+            with open(catalog_path, "w", encoding="utf-8") as catalog_file:
+                json.dump(catalog_dict, catalog_file)
+
+            tap_cmd = os.getenv("STITCH_TAP_PATH")
+            runner_python = sys.executable
+            if tap_cmd:
+                candidate_python = os.path.join(os.path.dirname(tap_cmd), "python")
+                if os.path.exists(candidate_python):
+                    runner_python = candidate_python
+
+            driver = (
+                "import json, sys\n"
+                "sys.path.insert(0, '{}')\n"
+                "import singer\n"
+                "import tap_outbrain\n"
+                "tap_outbrain.BASE_URL = '{}'\n"
+                "from tap_outbrain import do_sync\n"
+                "with open('{}', 'r') as c, open('{}', 'r') as s, open('{}', 'r') as cat:\n"
+                "    config = json.load(c)\n"
+                "    raw_state = json.load(s)\n"
+                "    catalog = singer.Catalog.from_dict(json.load(cat))\n"
+                "state = raw_state if raw_state else {{'campaign_performance': {{}}}}\n"
+                "if 'campaign_performance' not in state:\n"
+                "    state['campaign_performance'] = {{}}\n"
+                "do_sync(catalog, config, state)\n"
+            ).format(
+                repo_root,
+                self._server_base_url,
+                config_path,
+                state_path,
+                catalog_path,
+            )
+
+            proc = subprocess.run(
+                [runner_python, "-c", driver],
+                capture_output=True,
+                text=True,
+                cwd=repo_root,
+            )
+
+            output_messages = []
+            for line in proc.stdout.split("\n"):
+                if line.strip():
+                    try:
+                        output_messages.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        pass
+
+            return {
+                "returncode": proc.returncode,
+                "stdout": proc.stdout,
+                "stderr": proc.stderr,
+                "messages": output_messages,
+                "request_calls": self._server_calls,
+            }
+
+
+
+
+# Import subprocess here to avoid import at module level issues
+import subprocess
