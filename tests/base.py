@@ -4,7 +4,6 @@ import os
 import unittest
 from datetime import timedelta
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 try:
     from tap_tester import connections, menagerie, runner  # noqa: F401
@@ -14,9 +13,6 @@ except ImportError:
     # Fallback for environments without tap_tester (e.g., local testing)
     HAS_TAP_TESTER = False
     BaseCase = unittest.TestCase
-
-import tap_outbrain
-from tap_outbrain.discover import discover
 
 
 def _config_paths():
@@ -218,7 +214,11 @@ class OutbrainBaseTest(BaseCase):
             "password": os.environ["TAP_OUTBRAIN_PASSWORD"],
         }
 
-    @staticmethod
+    # -- end of OutbrainBaseTest --
+
+
+# Keep this marker here so the file ends cleanly
+if False:
     def _make_selected_catalog():
         """Return a discover() catalog with all streams marked as selected.
 
