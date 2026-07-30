@@ -1,4 +1,6 @@
 """Mock start date test for tap-outbrain."""
+import datetime
+
 try:
     from .base import OutbrainMockBaseTest
 except ImportError:
@@ -21,8 +23,10 @@ class OutbrainMockStartDateTest(OutbrainMockBaseTest):
 
     def test_earlier_start_date_gets_more_data(self):
         """Earlier start_date allows more data to be synced."""
-        old_start_date = "2024-01-01T00:00:00Z"
-        new_start_date = "2024-06-15T00:00:00Z"
+        today = datetime.date.today()
+        # Use recent dates within one 100-day chunk to avoid time.sleep() accumulation
+        old_start_date = (today - datetime.timedelta(days=14)).strftime("%Y-%m-%dT00:00:00Z")
+        new_start_date = (today - datetime.timedelta(days=7)).strftime("%Y-%m-%dT00:00:00Z")
 
         old_config = self._default_config(start_date=old_start_date)
         new_config = self._default_config(start_date=new_start_date)
