@@ -39,11 +39,11 @@ class TestCatalogMetadata(unittest.TestCase):
 
         # Mock file contents for both schemas
         def mock_file_content(filename, mode):
-            if 'campaign_performance.json' in filename:
-                return mock_open(read_data=json.dumps(self.mock_campaign_performance_schema))()
-            elif 'campaign.json' in filename:
-                return mock_open(read_data=json.dumps(self.mock_campaign_schema))()
-            return mock_open()()
+            data = json.dumps(
+                self.mock_campaign_performance_schema if 'campaign_performance.json' in filename
+                else self.mock_campaign_schema
+            )
+            return mock_open(read_data=data)()
 
         mock_file.side_effect = mock_file_content
 
@@ -65,11 +65,11 @@ class TestCatalogMetadata(unittest.TestCase):
 
         # Mock file contents for both schemas
         def mock_file_content(filename, mode):
-            if 'campaign_performance.json' in filename:
-                return mock_open(read_data=json.dumps(self.mock_campaign_performance_schema))()
-            elif 'campaign.json' in filename:
-                return mock_open(read_data=json.dumps(self.mock_campaign_schema))()
-            return mock_open()()
+            data = json.dumps(
+                self.mock_campaign_performance_schema if 'campaign_performance.json' in filename
+                else self.mock_campaign_schema
+            )
+            return mock_open(read_data=data)()
 
         mock_file.side_effect = mock_file_content
 
@@ -90,11 +90,11 @@ class TestCatalogMetadata(unittest.TestCase):
 
         # Mock file contents for both schemas
         def mock_file_content(filename, mode):
-            if 'campaign_performance.json' in filename:
-                return mock_open(read_data=json.dumps(self.mock_campaign_performance_schema))()
-            elif 'campaign.json' in filename:
-                return mock_open(read_data=json.dumps(self.mock_campaign_schema))()
-            return mock_open()()
+            data = json.dumps(
+                self.mock_campaign_performance_schema if 'campaign_performance.json' in filename
+                else self.mock_campaign_schema
+            )
+            return mock_open(read_data=data)()
 
         mock_file.side_effect = mock_file_content
 
@@ -140,11 +140,11 @@ class TestCatalogMetadata(unittest.TestCase):
 
         # Mock file contents for both schemas
         def mock_file_content(filename, mode):
-            if 'campaign_performance.json' in filename:
-                return mock_open(read_data=json.dumps(self.mock_campaign_performance_schema))()
-            elif 'campaign.json' in filename:
-                return mock_open(read_data=json.dumps(self.mock_campaign_schema))()
-            return mock_open()()
+            data = json.dumps(
+                self.mock_campaign_performance_schema if 'campaign_performance.json' in filename
+                else self.mock_campaign_schema
+            )
+            return mock_open(read_data=data)()
 
         mock_file.side_effect = mock_file_content
 
@@ -181,11 +181,11 @@ class TestCatalogMetadata(unittest.TestCase):
 
         # Mock file contents for both schemas
         def mock_file_content(filename, mode):
-            if 'campaign_performance.json' in filename:
-                return mock_open(read_data=json.dumps(self.mock_campaign_performance_schema))()
-            elif 'campaign.json' in filename:
-                return mock_open(read_data=json.dumps(self.mock_campaign_schema))()
-            return mock_open()()
+            data = json.dumps(
+                self.mock_campaign_performance_schema if 'campaign_performance.json' in filename
+                else self.mock_campaign_schema
+            )
+            return mock_open(read_data=data)()
 
         mock_file.side_effect = mock_file_content
 

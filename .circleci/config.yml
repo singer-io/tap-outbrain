@@ -30,7 +30,7 @@ jobs:
             source /usr/local/share/virtualenvs/tap-outbrain/bin/activate
             uv pip install pytest coverage parameterized
             mkdir -p test_output
-            coverage run -m pytest tests/unittests --junitxml=test_output/report.xml
+            coverage run -m pytest tests/unittests tests/mock_integration --junitxml=test_output/report.xml
             coverage xml -o coverage.xml
             coverage html
             coverage report -m --fail-under=99 | tee coverage.txt
@@ -61,6 +61,7 @@ jobs:
             uv pip install pytest
             export STITCH_TAP_PATH=/usr/local/share/virtualenvs/tap-outbrain/bin/tap-outbrain
             python tests/run_integration_tests.py --mode auto
+          when: always
 
 workflows:
   version: 2
