@@ -96,7 +96,7 @@ class OutbrainMockBaseTest(unittest.TestCase):
                 )
 
                 # Mock /login endpoint
-                if parsed.path == "/login":
+                if parsed.path.endswith("/login"):
                     body = json.dumps({"access_token": "mock_token_123"}).encode("utf-8")
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
@@ -105,13 +105,13 @@ class OutbrainMockBaseTest(unittest.TestCase):
                     self.wfile.write(body)
                     return
 
-                # Mock /campaigns endpoint
-                if parsed.path == "/campaigns":
+                # Mock /marketers/{id}/campaigns endpoint
+                if parsed.path.endswith("/campaigns"):
                     campaigns = [
                         cls._mock_campaign_response("c001"),
                         cls._mock_campaign_response("c002"),
                     ]
-                    body = json.dumps({"campaigns": campaigns}).encode("utf-8")
+                    body = json.dumps({"campaigns": campaigns, "totalCount": 2}).encode("utf-8")
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
                     self.send_header("Content-Length", str(len(body)))
@@ -119,11 +119,11 @@ class OutbrainMockBaseTest(unittest.TestCase):
                     self.wfile.write(body)
                     return
 
-                # Mock /campaign/{id}/performance endpoint
-                if "/performance" in parsed.path:
+                # Mock /reports/marketers/{id}/periodic endpoint
+                if "/periodic" in parsed.path:
                     from_param = query.get("from", [None])[0]
                     if from_param:
-                        perf_date = from_param
+                        perf_date = str(from_param)
                     else:
                         perf_date = (cls._now() - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
 
@@ -131,7 +131,10 @@ class OutbrainMockBaseTest(unittest.TestCase):
                         cls._mock_performance_response("c001", perf_date),
                         cls._mock_performance_response("c002", perf_date),
                     ]
-                    body = json.dumps({"performances": performances}).encode("utf-8")
+                    body = json.dumps({
+                        "results": performances,
+                        "totalResults": len(performances),
+                    }).encode("utf-8")
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
                     self.send_header("Content-Length", str(len(body)))
@@ -229,6 +232,8 @@ class OutbrainMockBaseTest(unittest.TestCase):
                 "import json, sys\n"
                 "sys.path.insert(0, '{}')\n"
                 "import singer\n"
+                "import tap_outbrain\n"
+                "tap_outbrain.BASE_URL = '{}'\n"
                 "from tap_outbrain import do_sync\n"
                 "with open('{}', 'r') as c, open('{}', 'r') as s, open('{}', 'r') as cat:\n"
                 "    config = json.load(c)\n"
@@ -237,6 +242,7 @@ class OutbrainMockBaseTest(unittest.TestCase):
                 "do_sync(catalog, config, state)\n"
             ).format(
                 repo_root,
+                cls._server_base_url,
                 config_path,
                 state_path,
                 catalog_path,
