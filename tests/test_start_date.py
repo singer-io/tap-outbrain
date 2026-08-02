@@ -47,8 +47,9 @@ try:
                 if stream_name in catalogs_by_stream
             ]
 
-            return super().perform_and_verify_table_and_field_selection(conn_id,
-    selection_catalogs)
+            return super().perform_and_verify_table_and_field_selection(
+                conn_id, selection_catalogs
+            )
 
 except ImportError:
     @unittest.skip("tap_tester not available; use mock_integration tests instead")

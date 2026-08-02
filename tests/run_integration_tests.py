@@ -40,16 +40,17 @@ def _credentials_are_valid() -> bool:
         return False
     try:
         import urllib.request
+        import base64
         import json as _json
-        payload = _json.dumps({"username": username, "password": password}).encode()
+        basic = base64.b64encode(f"{username}:{password}".encode("utf-8")).decode("ascii")
         req = urllib.request.Request(
             "https://api.outbrain.com/amplify/v0.1/login",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
+            headers={"Authorization": f"Basic {basic}"},
+            method="GET",
         )
-        urllib.request.urlopen(req, timeout=10)
-        return True
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            payload = _json.loads(resp.read().decode("utf-8"))
+            return bool(payload.get("OB-TOKEN-V1"))
     except Exception:
         return False
 
@@ -57,6 +58,18 @@ def _credentials_are_valid() -> bool:
 def _resolve_mode(requested_mode: str) -> str:
     if requested_mode in {"live", "mock"}:
         return requested_mode
+
+    required_env = (
+        "TAP_OUTBRAIN_ACCOUNT_ID",
+        "TAP_OUTBRAIN_USERNAME",
+        "TAP_OUTBRAIN_PASSWORD",
+        "TAP_OUTBRAIN_ACCESS_TOKEN",
+    )
+    has_live_env = bool(os.environ.get("TAP_OUTBRAIN_API_CREDS")) or all(
+        os.environ.get(var) for var in required_env
+    )
+    if not has_live_env:
+        return "mock"
 
     has_tap_tester = _tester_site_packages() is not None
     if not has_tap_tester:

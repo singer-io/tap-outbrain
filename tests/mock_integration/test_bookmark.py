@@ -86,8 +86,7 @@ class OutbrainMockBookmarkTest(OutbrainMockBaseTest):
         ]
         if len(state_messages) > 0:
             final_state = state_messages[-1].get("value", {})
-            bookmarks = final_state.get("bookmarks", {})
-            perf_bookmarks = bookmarks.get("campaign_performance", {})
+            perf_bookmarks = final_state.get("campaign_performance", {})
 
             # Bookmark values should be date strings
             for campaign_id, bookmark_value in perf_bookmarks.items():
