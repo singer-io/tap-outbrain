@@ -75,6 +75,12 @@ def _resolve_mode(requested_mode: str) -> str:
     if not has_tap_tester:
         return "mock"
 
+    # tap-tester's InMemoryBackend uses STITCH_TAP_PATH to invoke the tap.
+    # If it is not set (or points to a non-existent file), the tap cannot run.
+    tap_path = os.environ.get("STITCH_TAP_PATH", "")
+    if not tap_path or not os.path.isfile(tap_path):
+        return "mock"
+
     has_valid_creds = _credentials_are_valid()
     return "live" if has_valid_creds else "mock"
 
