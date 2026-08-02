@@ -32,21 +32,38 @@ def _tester_site_packages():
     return matches[0] if matches else None
 
 
+def _credentials_are_valid() -> bool:
+    """Return True only if the Outbrain credentials can successfully authenticate."""
+    username = os.environ.get("TAP_OUTBRAIN_USERNAME", "")
+    password = os.environ.get("TAP_OUTBRAIN_PASSWORD", "")
+    if not username or not password:
+        return False
+    try:
+        import urllib.request
+        import json as _json
+        payload = _json.dumps({"username": username, "password": password}).encode()
+        req = urllib.request.Request(
+            "https://api.outbrain.com/amplify/v0.1/login",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=10)
+        return True
+    except Exception:
+        return False
+
+
 def _resolve_mode(requested_mode: str) -> str:
     if requested_mode in {"live", "mock"}:
         return requested_mode
 
-    required_env = (
-        "TAP_OUTBRAIN_ACCOUNT_ID",
-        "TAP_OUTBRAIN_USERNAME",
-        "TAP_OUTBRAIN_PASSWORD",
-        "TAP_OUTBRAIN_ACCESS_TOKEN",
-    )
-    has_live_creds = bool(os.environ.get("TAP_OUTBRAIN_API_CREDS")) or all(
-        os.environ.get(var) for var in required_env
-    )
     has_tap_tester = _tester_site_packages() is not None
-    return "live" if (has_live_creds and has_tap_tester) else "mock"
+    if not has_tap_tester:
+        return "mock"
+
+    has_valid_creds = _credentials_are_valid()
+    return "live" if has_valid_creds else "mock"
 
 
 def main() -> int:
