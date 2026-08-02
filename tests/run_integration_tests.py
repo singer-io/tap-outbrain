@@ -22,6 +22,9 @@ LIVE_TEST_FILES = [
 ]
 
 
+TESTER_PYTHON = "/usr/local/share/virtualenvs/tap-tester/bin/python"
+
+
 def _resolve_mode(requested_mode: str) -> str:
     if requested_mode in {"live", "mock"}:
         return requested_mode
@@ -35,7 +38,8 @@ def _resolve_mode(requested_mode: str) -> str:
     has_live_creds = bool(os.environ.get("TAP_OUTBRAIN_API_CREDS")) or all(
         os.environ.get(var) for var in required_env
     )
-    return "live" if has_live_creds else "mock"
+    has_tap_tester = os.path.exists(TESTER_PYTHON)
+    return "live" if (has_live_creds and has_tap_tester) else "mock"
 
 
 def main() -> int:
@@ -51,8 +55,15 @@ def main() -> int:
     mode = _resolve_mode(args.mode)
     targets = LIVE_TEST_FILES if mode == "live" else ["tests/mock_integration"]
 
+    # Live tests require tap_tester which lives in its own virtualenv.
+    # Use that Python if available, otherwise fall back to the current interpreter.
+    if mode == "live":
+        python_exec = TESTER_PYTHON if os.path.exists(TESTER_PYTHON) else sys.executable
+    else:
+        python_exec = sys.executable
+
     print("Selected integration test mode:", mode)
-    print("Running:", " ".join([sys.executable, "-m", "pytest", *targets]))
+    print("Running:", " ".join([python_exec, "-m", "pytest", *targets]))
 
     env = os.environ.copy()
     # Add tests/ to PYTHONPATH so `from base import ...` resolves for live tests,
@@ -61,7 +72,7 @@ def main() -> int:
     existing = env.get("PYTHONPATH", "")
     env["PYTHONPATH"] = pythonpath + (":" + existing if existing else "")
 
-    command = [sys.executable, "-m", "pytest", *targets]
+    command = [python_exec, "-m", "pytest", *targets]
     return subprocess.call(command, env=env)
 
 
