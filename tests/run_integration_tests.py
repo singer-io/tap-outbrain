@@ -7,6 +7,7 @@ Usage examples:
 """
 
 import argparse
+import glob
 import os
 import subprocess
 import sys
@@ -22,7 +23,13 @@ LIVE_TEST_FILES = [
 ]
 
 
-TESTER_PYTHON = "/usr/local/share/virtualenvs/tap-tester/bin/python"
+TESTER_VENV = "/usr/local/share/virtualenvs/tap-tester"
+
+
+def _tester_site_packages():
+    """Return tap-tester site-packages path, or None if not found."""
+    matches = glob.glob(os.path.join(TESTER_VENV, "lib", "python*", "site-packages"))
+    return matches[0] if matches else None
 
 
 def _resolve_mode(requested_mode: str) -> str:
@@ -38,7 +45,7 @@ def _resolve_mode(requested_mode: str) -> str:
     has_live_creds = bool(os.environ.get("TAP_OUTBRAIN_API_CREDS")) or all(
         os.environ.get(var) for var in required_env
     )
-    has_tap_tester = os.path.exists(TESTER_PYTHON)
+    has_tap_tester = _tester_site_packages() is not None
     return "live" if (has_live_creds and has_tap_tester) else "mock"
 
 
@@ -55,24 +62,26 @@ def main() -> int:
     mode = _resolve_mode(args.mode)
     targets = LIVE_TEST_FILES if mode == "live" else ["tests/mock_integration"]
 
-    # Live tests require tap_tester which lives in its own virtualenv.
-    # Use that Python if available, otherwise fall back to the current interpreter.
-    if mode == "live":
-        python_exec = TESTER_PYTHON if os.path.exists(TESTER_PYTHON) else sys.executable
-    else:
-        python_exec = sys.executable
-
     print("Selected integration test mode:", mode)
-    print("Running:", " ".join([python_exec, "-m", "pytest", *targets]))
+    print("Running:", " ".join([sys.executable, "-m", "pytest", *targets]))
 
     env = os.environ.copy()
-    # Add tests/ to PYTHONPATH so `from base import ...` resolves for live tests,
-    # and tests/mock_integration/ for mock tests.
-    pythonpath = "tests" if mode == "live" else "tests/mock_integration"
-    existing = env.get("PYTHONPATH", "")
-    env["PYTHONPATH"] = pythonpath + (":" + existing if existing else "")
+    # tests/ (live) or tests/mock_integration (mock) must be on PYTHONPATH
+    # so bare `from base import ...` imports resolve.
+    pythonpath_parts = ["tests" if mode == "live" else "tests/mock_integration"]
 
-    command = [python_exec, "-m", "pytest", *targets]
+    if mode == "live":
+        # tap_tester lives in its own virtualenv which does not have pytest.
+        # Run pytest with the current (tap-outbrain) Python that has pytest,
+        # but expose tap-tester's site-packages so `import tap_tester` works.
+        tester_sp = _tester_site_packages()
+        if tester_sp:
+            pythonpath_parts.append(tester_sp)
+
+    existing = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = ":".join(pythonpath_parts) + (":" + existing if existing else "")
+
+    command = [sys.executable, "-m", "pytest", *targets]
     return subprocess.call(command, env=env)
 
 
