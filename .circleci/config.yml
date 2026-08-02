@@ -44,13 +44,6 @@ jobs:
       - store_artifacts:
           path: htmlcov
       - run:
-          name: 'Upload Coverage Report'
-          command: |
-            source /usr/local/share/virtualenvs/tap-outbrain/bin/activate
-            uv pip install codecov
-            codecov --file=coverage.xml --flags=unittests
-          when: always
-      - run:
           name: 'Integration Tests (Auto Mode)'
           command: |
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
