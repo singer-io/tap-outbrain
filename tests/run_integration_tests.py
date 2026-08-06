@@ -55,9 +55,74 @@ def _credentials_are_valid() -> bool:
         return False
 
 
-def _resolve_mode(requested_mode: str) -> str:
+def _has_stitch_source_access() -> bool:
+    """Return True when the current Stitch account can create platform.outbrain sources."""
+    host = os.environ.get("STITCH_API_HOST", "").rstrip("/")
+    email = os.environ.get("STITCH_API_EMAIL", "")
+    password = os.environ.get("SANDBOX_PASSWORD") or os.environ.get("STITCH_API_PASSWORD", "")
+    if not host or not email or not password:
+        return False
+
+    try:
+        import json as _json
+        import urllib.error
+        import urllib.request
+
+        session_req = urllib.request.Request(
+            f"{host}/session",
+            data=_json.dumps({"email": email, "password": password}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(session_req, timeout=10) as resp:
+            set_cookie = resp.headers.get("Set-Cookie", "")
+
+        token = ""
+        for part in set_cookie.split(";"):
+            part = part.strip()
+            if part.startswith("DASHSESS2="):
+                token = part.split("=", 1)[1]
+                break
+        if not token:
+            return False
+
+        probe_payload = {
+            "display_name": "tap-outbrain-access-check",
+            "type": "platform.outbrain",
+            "properties": {"frequency_in_minutes": "60"},
+        }
+        probe_req = urllib.request.Request(
+            f"{host}/v4/sources",
+            data=_json.dumps(probe_payload).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+
+        try:
+            with urllib.request.urlopen(probe_req, timeout=10):
+                return True
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="ignore")
+            try:
+                payload = _json.loads(body)
+            except Exception:
+                payload = {}
+
+            if isinstance(payload, dict) and payload.get("error") == "AccessDenied":
+                return False
+
+            # Any non-AccessDenied validation error means source type is available.
+            return True
+    except Exception:
+        return False
+
+
+def _resolve_mode(requested_mode: str):
     if requested_mode in {"live", "mock"}:
-        return requested_mode
+        return requested_mode, None
 
     required_env = (
         "TAP_OUTBRAIN_ACCOUNT_ID",
@@ -69,20 +134,26 @@ def _resolve_mode(requested_mode: str) -> str:
         os.environ.get(var) for var in required_env
     )
     if not has_live_env:
-        return "mock"
+        return "mock", "Outbrain credentials not found; running mock tests."
 
     has_tap_tester = _tester_site_packages() is not None
     if not has_tap_tester:
-        return "mock"
+        return "mock", "tap-tester site-packages not found; running mock tests."
 
     # tap-tester's InMemoryBackend uses STITCH_TAP_PATH to invoke the tap.
     # If it is not set (or points to a non-existent file), the tap cannot run.
     tap_path = os.environ.get("STITCH_TAP_PATH", "")
     if not tap_path or not os.path.isfile(tap_path):
-        return "mock"
+        return "mock", "STITCH_TAP_PATH is missing/invalid; running mock tests."
 
     has_valid_creds = _credentials_are_valid()
-    return "live" if has_valid_creds else "mock"
+    if not has_valid_creds:
+        return "mock", "Outbrain credentials failed login validation; running mock tests."
+
+    if not _has_stitch_source_access():
+        return "mock", "Stitch account cannot access source type platform.outbrain; running mock tests."
+
+    return "live", None
 
 
 def main() -> int:
@@ -95,10 +166,12 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    mode = _resolve_mode(args.mode)
+    mode, note = _resolve_mode(args.mode)
     targets = LIVE_TEST_FILES if mode == "live" else ["tests/mock_integration"]
 
     print("Selected integration test mode:", mode)
+    if note:
+        print(note)
     print("Running:", " ".join([sys.executable, "-m", "pytest", *targets]))
 
     env = os.environ.copy()

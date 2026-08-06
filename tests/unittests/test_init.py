@@ -637,7 +637,17 @@ class TestSyncPerformance(unittest.TestCase):
             {'campaignId': 'c1'}, {'campaignId': 'c1'}
         )
 
-        mock_warning.assert_called_once()
+        self.assertGreater(mock_warning.call_count, 0)
+        warning_message = (
+            'More performance data (`{}`) than the tap can currently retrieve (`{}`)'
+            .format(
+                tap_outbrain.REPORTS_MARKETERS_PERIODIC_MAX_LIMIT + 1,
+                tap_outbrain.REPORTS_MARKETERS_PERIODIC_MAX_LIMIT,
+            )
+        )
+        self.assertTrue(
+            all(call.args == (warning_message,) for call in mock_warning.call_args_list)
+        )
 
 
 # ---------------------------------------------------------------------------
