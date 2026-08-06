@@ -1,13 +1,20 @@
 import unittest
 from unittest.mock import patch, mock_open
 import json
+import os
 from singer import metadata
 
+from tap_outbrain import schema as schema_module
 from tap_outbrain.schema import get_schemas
 from tap_outbrain.streams import STREAMS
 
 
 class TestCatalogMetadata(unittest.TestCase):
+
+    def test_schema_get_abs_path_joins_module_dir(self):
+        """schema.get_abs_path returns path rooted at tap_outbrain module directory."""
+        result = schema_module.get_abs_path('schemas/campaign.json')
+        self.assertTrue(result.endswith(os.path.join('tap_outbrain', 'schemas', 'campaign.json')))
 
     def setUp(self):
         """Set up test fixtures with mock schema data."""
