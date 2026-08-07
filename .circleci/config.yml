@@ -30,7 +30,7 @@ jobs:
             source /usr/local/share/virtualenvs/tap-outbrain/bin/activate
             uv pip install pytest coverage parameterized
             mkdir -p test_output
-            coverage run --source=tap_outbrain -m pytest tests/unittests tests/mock_integration --junitxml=test_output/report.xml
+            coverage run -m pytest tests/unittests tests/mock_integration --junitxml=test_output/report.xml
             coverage xml -o coverage.xml
             coverage html
             coverage report -m --fail-under=99 | tee coverage.txt
@@ -44,20 +44,16 @@ jobs:
       - store_artifacts:
           path: htmlcov
       - run:
-          name: 'Integration Tests'
+          name: 'Integration Tests (Auto Mode)'
           command: |
-            if [ "$USE_TAPTESTER" = "true" ]; then
-              source /usr/local/share/virtualenvs/tap-tester/bin/activate
-              uv pip install --upgrade awscli
-              aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
-              source dev_env.sh
-              unset USE_STITCH_BACKEND
-              run-test --tap=tap-outbrain tests
-            else
-              source /usr/local/share/virtualenvs/tap-outbrain/bin/activate
-              uv pip install pytest
-              python -m pytest tests/mock_integration/ -v
-            fi
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            uv pip install --upgrade awscli
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh || true
+            if [ -f dev_env.sh ]; then source dev_env.sh; fi
+            source /usr/local/share/virtualenvs/tap-outbrain/bin/activate
+            uv pip install pytest
+            export STITCH_TAP_PATH=/usr/local/share/virtualenvs/tap-outbrain/bin/tap-outbrain
+            python tests/run_integration_tests.py --mode auto
           when: always
 
 workflows:
