@@ -10,9 +10,16 @@ except ImportError:
 class OutbrainMockStartDateTest(OutbrainMockBaseTest):
     """Test start_date behavior with mock server."""
 
+    @staticmethod
+    def _recent_start_date(days_ago):
+        """Return a recent UTC start_date to keep mock sync windows bounded."""
+        return (datetime.date.today() - datetime.timedelta(days=days_ago)).strftime(
+            "%Y-%m-%dT00:00:00Z"
+        )
+
     def test_start_date_drives_sync_window(self):
         """start_date parameter controls the sync window for incremental streams."""
-        start_date = "2024-06-01T00:00:00Z"
+        start_date = self._recent_start_date(14)
         config = self._default_config(start_date=start_date)
         result = self._run_mock_sync(config=config)
         self.assertEqual(result["returncode"], 0, msg=result["stderr"])
@@ -60,7 +67,7 @@ class OutbrainMockStartDateTest(OutbrainMockBaseTest):
 
     def test_incremental_streams_respect_start_date(self):
         """Incremental streams (campaign_performance) respect start_date."""
-        start_date = "2024-05-15T00:00:00Z"
+        start_date = self._recent_start_date(20)
         config = self._default_config(start_date=start_date)
         result = self._run_mock_sync(config=config)
 
@@ -83,7 +90,7 @@ class OutbrainMockStartDateTest(OutbrainMockBaseTest):
 
     def test_full_table_streams_ignore_start_date(self):
         """Full table streams (campaign) don't use start_date for filtering."""
-        start_date = "2024-06-15T00:00:00Z"
+        start_date = self._recent_start_date(10)
         config = self._default_config(start_date=start_date)
         result = self._run_mock_sync(config=config)
 

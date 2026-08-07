@@ -25,6 +25,7 @@ class OutbrainMockBaseTest(unittest.TestCase):
     _server_thread = None
     _server_base_url = None
     _server_calls = []
+    _sync_result_cache = {}
 
     @staticmethod
     def _now():
@@ -179,6 +180,15 @@ class OutbrainMockBaseTest(unittest.TestCase):
         """Clear server calls before each test."""
         self.__class__._server_calls = []
 
+    @staticmethod
+    def _cache_key(config, state):
+        """Build deterministic cache key for identical sync invocations."""
+        return json.dumps(
+            {"config": config, "state": state},
+            sort_keys=True,
+            default=str,
+        )
+
     @classmethod
     def _default_config(cls, start_date=None):
         """Return default mock config with fake Outbrain credentials."""
@@ -197,6 +207,13 @@ class OutbrainMockBaseTest(unittest.TestCase):
         """Run tap-outbrain sync with mock configuration and return captured output."""
         run_config = config or self._default_config()
         run_state = state or {}
+
+        # Reuse results for identical runs to keep mock tests fast.
+        cache_key = self._cache_key(run_config, run_state)
+        cached = self.__class__._sync_result_cache.get(cache_key)
+        if cached is not None:
+            return copy.deepcopy(cached)
+
         repo_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -242,9 +259,11 @@ class OutbrainMockBaseTest(unittest.TestCase):
 
             driver = (
                 "import json, sys\n"
+                "import time\n"
                 "sys.path.insert(0, '{}')\n"
                 "import singer\n"
                 "import tap_outbrain\n"
+                "time.sleep = lambda *_args, **_kwargs: None\n"
                 "tap_outbrain.BASE_URL = '{}'\n"
                 "from tap_outbrain import do_sync\n"
                 "with open('{}', 'r') as c, open('{}', 'r') as s, open('{}', 'r') as cat:\n"
@@ -278,13 +297,15 @@ class OutbrainMockBaseTest(unittest.TestCase):
                     except json.JSONDecodeError:
                         pass
 
-            return {
+            result = {
                 "returncode": proc.returncode,
                 "stdout": proc.stdout,
                 "stderr": proc.stderr,
                 "messages": output_messages,
                 "request_calls": self._server_calls,
             }
+            self.__class__._sync_result_cache[cache_key] = copy.deepcopy(result)
+            return result
 
 
 # Import subprocess here to avoid import at module level issues

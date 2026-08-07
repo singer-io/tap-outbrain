@@ -1,4 +1,5 @@
 """Mock bookmark test for tap-outbrain."""
+import datetime
 try:
     from .base import OutbrainMockBaseTest
 except ImportError:
@@ -41,7 +42,9 @@ class OutbrainMockBookmarkTest(OutbrainMockBaseTest):
 
     def test_bookmark_respects_start_date(self):
         """Initial sync respects configured start_date."""
-        start_date = "2024-06-01T00:00:00Z"
+        start_date = (
+            datetime.date.today() - datetime.timedelta(days=14)
+        ).strftime("%Y-%m-%dT00:00:00Z")
         config = self._default_config(start_date=start_date)
         result = self._run_mock_sync(config=config)
         self.assertEqual(result["returncode"], 0, msg=result["stderr"])
