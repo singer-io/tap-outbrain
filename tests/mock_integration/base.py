@@ -259,11 +259,9 @@ class OutbrainMockBaseTest(unittest.TestCase):
 
             driver = (
                 "import json, sys\n"
-                "import time\n"
                 "sys.path.insert(0, '{}')\n"
                 "import singer\n"
                 "import tap_outbrain\n"
-                "time.sleep = lambda *_args, **_kwargs: None\n"
                 "tap_outbrain.BASE_URL = '{}'\n"
                 "from tap_outbrain import do_sync\n"
                 "with open('{}', 'r') as c, open('{}', 'r') as s, open('{}', 'r') as cat:\n"
