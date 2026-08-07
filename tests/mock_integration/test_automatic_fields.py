@@ -1,8 +1,5 @@
 """Mock automatic fields test for tap-outbrain."""
-try:
-    from .base import OutbrainMockBaseTest
-except ImportError:
-    from base import OutbrainMockBaseTest
+from .base import OutbrainMockBaseTest
 
 
 class OutbrainMockAutomaticFieldsTest(OutbrainMockBaseTest):

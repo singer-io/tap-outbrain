@@ -1,10 +1,7 @@
 """Mock start date test for tap-outbrain."""
 import datetime
 
-try:
-    from .base import OutbrainMockBaseTest
-except ImportError:
-    from base import OutbrainMockBaseTest
+from .base import OutbrainMockBaseTest
 
 
 class OutbrainMockStartDateTest(OutbrainMockBaseTest):
