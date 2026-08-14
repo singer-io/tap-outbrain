@@ -9,6 +9,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from unittest.mock import MagicMock
 from urllib.parse import parse_qs, urlparse
 
 
@@ -207,6 +208,7 @@ class OutbrainMockBaseTest(unittest.TestCase):
         """Run tap-outbrain sync with mock configuration and return captured output."""
         run_config = config or self._default_config()
         run_state = state or {}
+        mock_client = MagicMock()
 
         # Reuse results for identical runs to keep mock tests fast.
         cache_key = self._cache_key(run_config, run_state)
@@ -229,7 +231,7 @@ class OutbrainMockBaseTest(unittest.TestCase):
 
             # Create a fully-selected catalog (mark all streams as selected)
             from tap_outbrain.discover import discover
-            catalog = discover()
+            catalog = discover(mock_client)
             catalog_streams = []
             for stream in catalog.streams:
                 # Set selected=true on the root breadcrumb entry
