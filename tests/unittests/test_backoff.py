@@ -28,6 +28,13 @@ class TestOutbrainClient(unittest.TestCase):
     def setUp(self):
         self.client = OutbrainClient()
 
+    def test_dummy_response_raise_for_status(self):
+        """DummyResponse.raise_for_status raises HTTPError containing the status code."""
+        resp = DummyResponse(503)
+        with self.assertRaises(HTTPError) as cm:
+            resp.raise_for_status()
+        self.assertIn("503", str(cm.exception))
+
     def test_rate_limit_backoff_generator_continuous(self):
         """
         Verify that _rate_limit_backoff yields the current retry_after value

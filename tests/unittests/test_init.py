@@ -3,6 +3,8 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import datetime
+import argparse
+import runpy
 
 import tap_outbrain
 from tap_outbrain import (
@@ -614,6 +616,40 @@ class TestSyncPerformance(unittest.TestCase):
         expected_from = datetime.date(2024, 3, 13)
         self.assertEqual(first_call_params['from'], expected_from)
 
+    @patch('time.sleep')
+    @patch('singer.write_state')
+    @patch('singer.write_record')
+    @patch('tap_outbrain.LOGGER.warning')
+    @patch('tap_outbrain.request')
+    def test_sync_performance_logs_warning_when_results_exceed_limit(
+        self, mock_request, mock_warning, mock_write_record, mock_write_state, mock_sleep
+    ):
+        """sync_performance logs a warning when totalResults exceeds tap limit."""
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = self._make_api_response(
+            '2024-03-05',
+            tap_outbrain.REPORTS_MARKETERS_PERIODIC_MAX_LIMIT + 1,
+        )
+        mock_request.return_value = mock_resp
+
+        state = {'campaign_performance': {}}
+        tap_outbrain.sync_performance(
+            state, 'tok', 'acct1', 'campaign_performance', 'c1',
+            {'campaignId': 'c1'}, {'campaignId': 'c1'}
+        )
+
+        self.assertGreater(mock_warning.call_count, 0)
+        warning_message = (
+            'More performance data (`{}`) than the tap can currently retrieve (`{}`)'
+            .format(
+                tap_outbrain.REPORTS_MARKETERS_PERIODIC_MAX_LIMIT + 1,
+                tap_outbrain.REPORTS_MARKETERS_PERIODIC_MAX_LIMIT,
+            )
+        )
+        self.assertTrue(
+            all(call.args == (warning_message,) for call in mock_warning.call_args_list)
+        )
+
 
 # ---------------------------------------------------------------------------
 # sync_campaign_performance
@@ -703,3 +739,81 @@ class TestSyncCampaigns(unittest.TestCase):
         state = {'campaign_performance': {}}
         tap_outbrain.sync_campaigns(state, 'tok', 'acct1', ['campaign'])
         mock_sync_page.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# main_impl and main
+# ---------------------------------------------------------------------------
+
+class TestMainEntrypoints(unittest.TestCase):
+
+    @patch('tap_outbrain.do_discover')
+    @patch('tap_outbrain.do_sync')
+    @patch('singer.utils.parse_args')
+    def test_main_impl_discover_branch(self, mock_parse_args, mock_do_sync, mock_do_discover):
+        """main_impl dispatches to do_discover when --discover is set."""
+        mock_parse_args.return_value = argparse.Namespace(
+            discover=True,
+            catalog=None,
+            state=None,
+            config={},
+        )
+
+        tap_outbrain.main_impl()
+
+        mock_do_discover.assert_called_once()
+        mock_do_sync.assert_not_called()
+
+    @patch('tap_outbrain.do_discover')
+    @patch('tap_outbrain.do_sync')
+    @patch('singer.utils.parse_args')
+    def test_main_impl_catalog_branch_uses_default_state(self, mock_parse_args, mock_do_sync, mock_do_discover):
+        """main_impl uses DEFAULT_STATE when args.state is missing."""
+        fake_catalog = MagicMock()
+        fake_config = {'account_id': 'acct1', 'username': 'u', 'password': 'p', 'start_date': '2024-01-01T00:00:00Z'}
+        mock_parse_args.return_value = argparse.Namespace(
+            discover=False,
+            catalog=fake_catalog,
+            state=None,
+            config=fake_config,
+        )
+
+        tap_outbrain.main_impl()
+
+        mock_do_discover.assert_not_called()
+        mock_do_sync.assert_called_once_with(fake_catalog, fake_config, tap_outbrain.DEFAULT_STATE)
+
+    @patch('tap_outbrain.main_impl')
+    def test_main_calls_main_impl_on_success(self, mock_main_impl):
+        """main delegates to main_impl for normal execution."""
+        tap_outbrain.main()
+        mock_main_impl.assert_called_once()
+
+    @patch('tap_outbrain.LOGGER.critical')
+    @patch('tap_outbrain.main_impl')
+    def test_main_logs_and_reraises_exceptions(self, mock_main_impl, mock_critical):
+        """main logs critical and re-raises when main_impl fails."""
+        mock_main_impl.side_effect = ValueError('boom')
+
+        with self.assertRaises(ValueError):
+            tap_outbrain.main()
+
+        mock_critical.assert_called_once()
+
+    @patch('tap_outbrain.discover.discover')
+    @patch('singer.utils.parse_args')
+    def test_running_module_as_script_triggers_entrypoint(self, mock_parse_args, mock_discover):
+        """Executing __init__.py as __main__ triggers the if __name__ == '__main__' block."""
+        mock_parse_args.return_value = argparse.Namespace(
+            discover=True,
+            catalog=None,
+            state=None,
+            config={},
+        )
+        mock_catalog = MagicMock()
+        mock_catalog.to_dict.return_value = {'streams': []}
+        mock_discover.return_value = mock_catalog
+
+        runpy.run_path(tap_outbrain.__file__, run_name='__main__')
+
+        mock_parse_args.assert_called_once()
