@@ -756,13 +756,41 @@ class TestMainEntrypoints(unittest.TestCase):
             discover=True,
             catalog=None,
             state=None,
-            config={},
+            config={"access_token": "temp_token"},
         )
 
         tap_outbrain.main_impl()
 
         mock_do_discover.assert_called_once()
         mock_do_sync.assert_not_called()
+
+    @patch('tap_outbrain.OutbrainClient')
+    @patch('tap_outbrain.generate_token')
+    @patch('tap_outbrain.do_discover')
+    @patch('tap_outbrain.do_sync')
+    @patch('singer.utils.parse_args')
+    def test_main_impl_discover_mode_token_generation_fails(
+        self, mock_parse_args, mock_do_sync, mock_do_discover, mock_gen_token, mock_client
+    ):
+        """main_impl raises RuntimeError when generate_token returns None in discover mode."""
+        mock_parse_args.return_value = argparse.Namespace(
+            discover=True,
+            catalog=None,
+            state=None,
+            config={
+                'account_id': 'acct1',
+                'username': 'user',
+                'password': 'pass',
+                'start_date': '2024-01-01T00:00:00Z',
+            },
+        )
+        mock_gen_token.return_value = None
+
+        with self.assertRaises(RuntimeError):
+            tap_outbrain.main_impl()
+
+        mock_do_discover.assert_not_called()
+        mock_client.assert_not_called()
 
     @patch('tap_outbrain.do_discover')
     @patch('tap_outbrain.do_sync')
@@ -808,7 +836,7 @@ class TestMainEntrypoints(unittest.TestCase):
             discover=True,
             catalog=None,
             state=None,
-            config={},
+            config={"access_token": "temp_token"},
         )
         mock_catalog = MagicMock()
         mock_catalog.to_dict.return_value = {'streams': []}
