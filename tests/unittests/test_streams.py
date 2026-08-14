@@ -165,7 +165,7 @@ class TestCampaignPerformanceStream(unittest.TestCase):
             ["campaignId", "fromDate"]
         )
         self.assertEqual(CampaignPerformance.bookmark_properties, ["fromDate"])
-        self.assertEqual(CampaignPerformance.replication_keys, "fromDate")
+        self.assertEqual(CampaignPerformance.replication_keys, ["fromDate"])
         self.assertEqual(CampaignPerformance.replication_method, "INCREMENTAL")
         self.assertEqual(CampaignPerformance.parent, "campaign")
 
