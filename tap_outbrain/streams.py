@@ -83,7 +83,7 @@ class CampaignPerformance(BaseStream):
     name = "campaign_performance"
     key_properties = ["campaignId", "fromDate"]
     bookmark_properties = ["fromDate"]
-    replication_keys = "fromDate"
+    replication_keys = ["fromDate"]
     replication_method = "INCREMENTAL"
     parent = "campaign"
     # check_access() in BaseStream returns True for child streams.
