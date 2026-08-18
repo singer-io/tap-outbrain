@@ -59,7 +59,7 @@ class OutbrainClient:
             interval=30,
         )
         def _call():
-            LOGGER.info(f"Making request: {method} {url} params={params or {}} data={data or {}}")
+            LOGGER.debug(f"Making request: {method} {url} params={params or {}} data={data or {}}")
 
             req = requests.Request(
                 method,
@@ -73,7 +73,7 @@ class OutbrainClient:
             LOGGER.debug(f"Prepared {method} URL: {req.url}")
             resp = SESSION.send(req)
 
-            LOGGER.info(f"Received {resp.status_code} for {method} {req.url}")
+            LOGGER.debug(f"Received {resp.status_code} for {method} {req.url}")
 
             if resp.status_code == 429:
                 try:
