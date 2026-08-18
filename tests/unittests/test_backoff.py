@@ -6,6 +6,8 @@ from requests.exceptions import HTTPError, RequestException
 
 from tap_outbrain.client import (
     OutbrainClient,
+    OutbrainForbiddenError,
+    OutbrainUnauthorizedError,
     Server429Error,
     SESSION,
     RETRY_RATE_LIMIT_MS,
@@ -222,7 +224,6 @@ class TestOutbrainClient(unittest.TestCase):
         Simulate a 403 Forbidden response and verify that
         OutbrainForbiddenError is raised with the correct message.
         """
-        from tap_outbrain.client import OutbrainForbiddenError
         forbidden_resp = DummyResponse(403, content=b"Access denied")
         mock_send.return_value = forbidden_resp
 
@@ -232,6 +233,76 @@ class TestOutbrainClient(unittest.TestCase):
         self.assertIn("403", str(cm.exception))
         self.assertIn("Access denied", str(cm.exception))
         self.assertEqual(mock_send.call_count, 1)
+
+    @patch.object(SESSION, "send")
+    def test_401_unauthorized_error(self, mock_send):
+        """
+        Simulate a 401 Unauthorized response and verify that
+        OutbrainUnauthorizedError is raised with the correct message.
+        """
+        unauthorized_resp = DummyResponse(401, content=b"Invalid token")
+        mock_send.return_value = unauthorized_resp
+
+        with self.assertRaises(OutbrainUnauthorizedError) as cm:
+            self.client.make_request("GET", "http://unauthorized/")
+
+        self.assertIn("401", str(cm.exception))
+        self.assertIn("Invalid token", str(cm.exception))
+        self.assertEqual(mock_send.call_count, 1)
+
+    def test_check_credentials_requires_access_token(self):
+        client = OutbrainClient(config={"account_id": "acct1"})
+
+        with self.assertRaises(ValueError) as cm:
+            client.check_credentials()
+
+        self.assertIn("access_token", str(cm.exception))
+
+    def test_check_credentials_requires_account_id(self):
+        client = OutbrainClient(config={"access_token": "tok"})
+
+        with self.assertRaises(ValueError) as cm:
+            client.check_credentials()
+
+        self.assertIn("account_id", str(cm.exception))
+
+    @patch.object(OutbrainClient, "make_request")
+    def test_check_credentials_success(self, mock_make_request):
+        client = OutbrainClient(config={"access_token": "tok", "account_id": "acct1"})
+
+        client.check_credentials()
+
+        mock_make_request.assert_called_once_with(
+            "GET",
+            "https://api.outbrain.com/amplify/v0.1/marketers/acct1/campaigns",
+            headers={"OB-TOKEN-V1": "tok"},
+            params={"limit": 1},
+        )
+
+    @patch.object(OutbrainClient, "make_request")
+    def test_check_credentials_raises_unauthorized_error(self, mock_make_request):
+        mock_make_request.side_effect = OutbrainUnauthorizedError(
+            "HTTP-error-code: 401, Error: b'Invalid token'"
+        )
+        client = OutbrainClient(config={"access_token": "tok", "account_id": "acct1"})
+
+        with self.assertRaises(OutbrainUnauthorizedError) as cm:
+            client.check_credentials()
+
+        self.assertIn("401 Unauthorized", str(cm.exception))
+
+    @patch.object(OutbrainClient, "make_request")
+    def test_check_credentials_raises_forbidden_error(self, mock_make_request):
+        mock_make_request.side_effect = OutbrainForbiddenError(
+            "HTTP-error-code: 403, Error: b'Access denied'"
+        )
+        client = OutbrainClient(config={"access_token": "tok", "account_id": "acct1"})
+
+        with self.assertRaises(OutbrainForbiddenError) as cm:
+            client.check_credentials()
+
+        self.assertIn("403 Forbidden", str(cm.exception))
+        self.assertIn("acct1", str(cm.exception))
 
     @patch('tap_outbrain.client.LOGGER')
     @patch.object(time, "sleep", lambda s: None)

@@ -16,6 +16,10 @@ class Server429Error(Exception):
     pass
 
 
+class OutbrainUnauthorizedError(Exception):
+    pass
+
+
 class OutbrainForbiddenError(Exception):
     pass
 
@@ -78,6 +82,10 @@ class OutbrainClient:
                     self._retry_after = RETRY_RATE_LIMIT_MS
                 self._retry_after /= 1000.0  # For miliseconds conversion to seconds
                 raise Server429Error("Rate limit exceeded")
+            elif resp.status_code == 401:
+                raise OutbrainUnauthorizedError(
+                    f"HTTP-error-code: 401, Error: {resp.content!r}"
+                )
             elif resp.status_code == 403:
                 raise OutbrainForbiddenError(
                     f"HTTP-error-code: 403, Error: {resp.content!r}"
@@ -91,3 +99,27 @@ class OutbrainClient:
             return resp
 
         return _call()
+
+    def check_credentials(self):
+        access_token = self.config.get("access_token")
+        account_id = self.config.get("account_id")
+
+        if not access_token:
+            raise ValueError("access_token is required to validate Outbrain credentials")
+        if not account_id:
+            raise ValueError("account_id is required to validate Outbrain credentials")
+
+        headers = {"OB-TOKEN-V1": access_token}
+        url = f"{OUTBRAIN_API_BASE}/marketers/{account_id}/campaigns"
+
+        try:
+            self.make_request("GET", url, headers=headers, params={"limit": 1})
+        except OutbrainUnauthorizedError as exc:
+            raise OutbrainUnauthorizedError(
+                "Invalid Outbrain credentials: access token was rejected with 401 Unauthorized."
+            ) from exc
+        except OutbrainForbiddenError as exc:
+            raise OutbrainForbiddenError(
+                "Outbrain credentials are valid but do not have access to the configured account "
+                f"'{account_id}' (403 Forbidden)."
+            ) from exc
