@@ -274,9 +274,8 @@ class TestOutbrainClient(unittest.TestCase):
 
         mock_make_request.assert_called_once_with(
             "GET",
-            "https://api.outbrain.com/amplify/v0.1/marketers/acct1/campaigns",
+            "https://api.outbrain.com/amplify/v0.1/marketers/acct1",
             headers={"OB-TOKEN-V1": "tok"},
-            params={"limit": 1},
         )
 
     @patch.object(OutbrainClient, "make_request")

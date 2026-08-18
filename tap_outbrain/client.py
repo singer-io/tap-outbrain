@@ -110,10 +110,10 @@ class OutbrainClient:
             raise ValueError("account_id is required to validate Outbrain credentials")
 
         headers = {"OB-TOKEN-V1": access_token}
-        url = f"{OUTBRAIN_API_BASE}/marketers/{account_id}/campaigns"
+        url = f"{OUTBRAIN_API_BASE}/marketers/{account_id}"
 
         try:
-            self.make_request("GET", url, headers=headers, params={"limit": 1})
+            self.make_request("GET", url, headers=headers)
         except OutbrainUnauthorizedError as exc:
             raise OutbrainUnauthorizedError(
                 "Invalid Outbrain credentials: access token was rejected with 401 Unauthorized."
