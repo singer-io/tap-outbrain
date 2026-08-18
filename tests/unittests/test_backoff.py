@@ -351,6 +351,29 @@ class TestOutbrainClient(unittest.TestCase):
 
     @patch('tap_outbrain.generate_token')
     @patch.object(OutbrainClient, "make_request")
+    def test_check_credentials_wraps_token_refresh_exception(
+        self, mock_make_request, mock_generate_token
+    ):
+        mock_make_request.side_effect = OutbrainUnauthorizedError(
+            "HTTP-error-code: 401, Error: b'Invalid token'"
+        )
+        mock_generate_token.side_effect = RuntimeError("login endpoint failed")
+        client = OutbrainClient(
+            config={
+                "access_token": "stale-token",
+                "account_id": "acct1",
+                "username": "user",
+                "password": "pass",
+            }
+        )
+
+        with self.assertRaises(OutbrainUnauthorizedError) as cm:
+            client.check_credentials()
+
+        self.assertIn("token refresh failed", str(cm.exception))
+
+    @patch('tap_outbrain.generate_token')
+    @patch.object(OutbrainClient, "make_request")
     def test_check_credentials_raises_when_refreshed_token_is_rejected(
         self, mock_make_request, mock_generate_token
     ):

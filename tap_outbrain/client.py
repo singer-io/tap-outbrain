@@ -128,12 +128,19 @@ class OutbrainClient:
             LOGGER.info("Credential check returned 401. Attempting to generate a new token.")
             import tap_outbrain
 
-            refreshed_token = tap_outbrain.generate_token(
-                username,
-                password,
-                config=self.config,
-                config_path=self.config_path,
-            )
+            try:
+                refreshed_token = tap_outbrain.generate_token(
+                    username,
+                    password,
+                    config=self.config,
+                    config_path=self.config_path,
+                )
+            except Exception as refresh_exc:
+                raise OutbrainUnauthorizedError(
+                    "Invalid Outbrain credentials: access token was rejected with 401 Unauthorized, "
+                    "and token refresh failed."
+                ) from refresh_exc
+
             if not refreshed_token:
                 raise OutbrainUnauthorizedError(
                     "Invalid Outbrain credentials: access token was rejected with 401 Unauthorized, "

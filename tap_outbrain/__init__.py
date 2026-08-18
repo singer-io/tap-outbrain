@@ -71,9 +71,16 @@ def generate_token(username, password, config=None, config_path=None):
     if access_token and config and config_path:
         persisted_config = dict(config)
         persisted_config['access_token'] = access_token
-        with open(config_path, 'w', encoding='utf-8') as config_file:
-            json.dump(persisted_config, config_file, indent=4)
-            config_file.write('\n')
+        try:
+            with open(config_path, 'w', encoding='utf-8') as config_file:
+                json.dump(persisted_config, config_file, indent=4)
+                config_file.write('\n')
+        except OSError as err:
+            LOGGER.warning(
+                "Failed to persist refreshed access token to %s: %s",
+                config_path,
+                err,
+            )
 
     return access_token
 

@@ -5,6 +5,7 @@ from unittest.mock import patch, MagicMock
 import datetime
 import argparse
 import json
+import os
 import runpy
 import tempfile
 
@@ -303,6 +304,7 @@ class TestGenerateToken(unittest.TestCase):
         with tempfile.NamedTemporaryFile('w+', suffix='.json', delete=False, encoding='utf-8') as config_file:
             json.dump({'username': 'user', 'password': 'pass'}, config_file)
             config_path = config_file.name
+        self.addCleanup(lambda: os.path.exists(config_path) and os.unlink(config_path))
 
         token = generate_token(
             'user',
@@ -316,6 +318,24 @@ class TestGenerateToken(unittest.TestCase):
 
         self.assertEqual(token, 'persisted-token')
         self.assertEqual(persisted_config['access_token'], 'persisted-token')
+
+    @patch('tap_outbrain.LOGGER.warning')
+    @patch('tap_outbrain.OutbrainClient')
+    def test_persist_token_warning_does_not_fail_generation(self, mock_client_cls, mock_warning):
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {'OB-TOKEN-V1': 'persisted-token'}
+        mock_client_cls.return_value.make_request.return_value = mock_resp
+
+        with patch('builtins.open', side_effect=OSError('disk full')):
+            token = generate_token(
+                'user',
+                'pass',
+                config={'username': 'user', 'password': 'pass'},
+                config_path='tmp/configs/config.json',
+            )
+
+        self.assertEqual(token, 'persisted-token')
+        mock_warning.assert_called_once()
 
     @patch('tap_outbrain.OutbrainClient')
     def test_calls_correct_endpoint(self, mock_client_cls):
