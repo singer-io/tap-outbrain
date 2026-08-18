@@ -61,12 +61,21 @@ def request(url, access_token, params):
     return OutbrainClient().make_request('GET', url, headers=headers, params=params)
 
 
-def generate_token(username, password):
+def generate_token(username, password, config=None, config_path=None):
     LOGGER.info("Generating new token using basic auth.")
     auth = HTTPBasicAuth(username, password)
 
     resp = OutbrainClient().make_request('GET', f'{BASE_URL}/login', auth=auth)
-    return resp.json().get('OB-TOKEN-V1')
+    access_token = resp.json().get('OB-TOKEN-V1')
+
+    if access_token and config and config_path:
+        persisted_config = dict(config)
+        persisted_config['access_token'] = access_token
+        with open(config_path, 'w', encoding='utf-8') as config_file:
+            json.dump(persisted_config, config_file, indent=4)
+            config_file.write('\n')
+
+    return access_token
 
 
 def parse_datetime(date_time):
@@ -302,7 +311,7 @@ def do_discover(client):
     LOGGER.info("Finished discover")
 
 
-def do_sync(catalog: singer.Catalog, config: Dict, state):
+def do_sync(catalog: singer.Catalog, config: Dict, state, config_path=None):
     #pylint: disable=global-statement
     global DEFAULT_START_DATE
 
@@ -310,7 +319,12 @@ def do_sync(catalog: singer.Catalog, config: Dict, state):
 
     DEFAULT_START_DATE = config.get('start_date')[:10]
 
-    access_token = config.get('access_token') or generate_token(config.get('username'), config.get('password'))
+    access_token = config.get('access_token') or generate_token(
+        config.get('username'),
+        config.get('password'),
+        config=config,
+        config_path=config_path,
+    )
     if access_token is None:
         LOGGER.fatal("Failed to generate a new access token.")
         raise RuntimeError
@@ -358,7 +372,10 @@ def main_impl():
 
     config = args.config
     access_token = config.get('access_token') or generate_token(
-        config.get('username'), config.get('password')
+        config.get('username'),
+        config.get('password'),
+        config=config,
+        config_path=getattr(args, 'config_path', None),
     )
     if access_token is None:
         LOGGER.fatal("Failed to generate a new access token.")
@@ -372,7 +389,7 @@ def main_impl():
         do_discover(client)
     elif args.catalog:
         state = args.state or DEFAULT_STATE
-        do_sync(args.catalog, config, state)
+        do_sync(args.catalog, config, state, config_path=getattr(args, 'config_path', None))
 
 
 def main():

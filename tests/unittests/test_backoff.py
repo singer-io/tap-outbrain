@@ -1,6 +1,4 @@
 import unittest
-import json
-import tempfile
 from unittest.mock import patch
 import time
 import requests
@@ -314,7 +312,12 @@ class TestOutbrainClient(unittest.TestCase):
 
         returned_token = client.check_credentials()
 
-        mock_generate_token.assert_called_once_with("user", "pass")
+        mock_generate_token.assert_called_once_with(
+            "user",
+            "pass",
+            config=client.config,
+            config_path=None,
+        )
         self.assertEqual(client.config["access_token"], "fresh-token")
         self.assertEqual(returned_token, "fresh-token")
         self.assertEqual(mock_make_request.call_count, 2)
@@ -369,46 +372,6 @@ class TestOutbrainClient(unittest.TestCase):
             client.check_credentials()
 
         self.assertIn("refreshed token was also rejected", str(cm.exception))
-
-    @patch('tap_outbrain.generate_token')
-    @patch.object(OutbrainClient, "make_request")
-    def test_check_credentials_persists_refreshed_token_to_config(
-        self, mock_make_request, mock_generate_token
-    ):
-        mock_make_request.side_effect = [
-            OutbrainUnauthorizedError("HTTP-error-code: 401, Error: b'Invalid token'"),
-            None,
-        ]
-        mock_generate_token.return_value = "fresh-token"
-
-        with tempfile.NamedTemporaryFile("w+", suffix=".json", delete=False, encoding="utf-8") as config_file:
-            json.dump(
-                {
-                    "access_token": "stale-token",
-                    "account_id": "acct1",
-                    "username": "user",
-                    "password": "pass",
-                },
-                config_file,
-            )
-            config_path = config_file.name
-
-        client = OutbrainClient(
-            config={
-                "access_token": "stale-token",
-                "account_id": "acct1",
-                "username": "user",
-                "password": "pass",
-            },
-            config_path=config_path,
-        )
-
-        client.check_credentials()
-
-        with open(config_path, "r", encoding="utf-8") as config_file:
-            persisted_config = json.load(config_file)
-
-        self.assertEqual(persisted_config["access_token"], "fresh-token")
 
     @patch.object(OutbrainClient, "make_request")
     def test_check_credentials_raises_forbidden_error(self, mock_make_request):

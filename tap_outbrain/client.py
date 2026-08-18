@@ -1,5 +1,3 @@
-import json
-
 import backoff
 import requests
 import singer
@@ -119,16 +117,6 @@ class OutbrainClient:
         def _check_with_token(token):
             self.make_request("GET", url, headers={"OB-TOKEN-V1": token})
 
-        def _persist_access_token(token):
-            if not self.config_path:
-                return
-
-            persisted_config = dict(self.config)
-            persisted_config["access_token"] = token
-            with open(self.config_path, "w", encoding="utf-8") as config_file:
-                json.dump(persisted_config, config_file, indent=4)
-                config_file.write("\n")
-
         try:
             _check_with_token(access_token)
         except OutbrainUnauthorizedError as exc:
@@ -140,7 +128,12 @@ class OutbrainClient:
             LOGGER.info("Credential check returned 401. Attempting to generate a new token.")
             import tap_outbrain
 
-            refreshed_token = tap_outbrain.generate_token(username, password)
+            refreshed_token = tap_outbrain.generate_token(
+                username,
+                password,
+                config=self.config,
+                config_path=self.config_path,
+            )
             if not refreshed_token:
                 raise OutbrainUnauthorizedError(
                     "Invalid Outbrain credentials: access token was rejected with 401 Unauthorized, "
@@ -156,8 +149,6 @@ class OutbrainClient:
                     "Invalid Outbrain credentials: access token was rejected with 401 Unauthorized, "
                     "and the refreshed token was also rejected."
                 ) from refreshed_exc
-
-            _persist_access_token(refreshed_token)
         except OutbrainForbiddenError as exc:
             raise OutbrainForbiddenError(
                 "Outbrain credentials are valid but do not have access to the configured account "
