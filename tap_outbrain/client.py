@@ -1,3 +1,5 @@
+import json
+
 import backoff
 import requests
 import singer
@@ -26,9 +28,10 @@ class OutbrainForbiddenError(Exception):
 
 class OutbrainClient:
 
-    def __init__(self, config=None):
+    def __init__(self, config=None, config_path=None):
         self._retry_after = RETRY_RATE_LIMIT_MS / 1000.0  # Conversion to seconds
         self.config = config or {}
+        self.config_path = config_path
 
     def _rate_limit_backoff(self):
         """
@@ -103,23 +106,62 @@ class OutbrainClient:
     def check_credentials(self):
         access_token = self.config.get("access_token")
         account_id = self.config.get("account_id")
+        username = self.config.get("username")
+        password = self.config.get("password")
 
         if not access_token:
             raise ValueError("access_token is required to validate Outbrain credentials")
         if not account_id:
             raise ValueError("account_id is required to validate Outbrain credentials")
 
-        headers = {"OB-TOKEN-V1": access_token}
         url = f"{OUTBRAIN_API_BASE}/marketers/{account_id}"
 
+        def _check_with_token(token):
+            self.make_request("GET", url, headers={"OB-TOKEN-V1": token})
+
+        def _persist_access_token(token):
+            if not self.config_path:
+                return
+
+            persisted_config = dict(self.config)
+            persisted_config["access_token"] = token
+            with open(self.config_path, "w", encoding="utf-8") as config_file:
+                json.dump(persisted_config, config_file, indent=4)
+                config_file.write("\n")
+
         try:
-            self.make_request("GET", url, headers=headers)
+            _check_with_token(access_token)
         except OutbrainUnauthorizedError as exc:
-            raise OutbrainUnauthorizedError(
-                "Invalid Outbrain credentials: access token was rejected with 401 Unauthorized."
-            ) from exc
+            if not username or not password:
+                raise OutbrainUnauthorizedError(
+                    "Invalid Outbrain credentials: access token was rejected with 401 Unauthorized."
+                ) from exc
+
+            LOGGER.info("Credential check returned 401. Attempting to generate a new token.")
+            import tap_outbrain
+
+            refreshed_token = tap_outbrain.generate_token(username, password)
+            if not refreshed_token:
+                raise OutbrainUnauthorizedError(
+                    "Invalid Outbrain credentials: access token was rejected with 401 Unauthorized, "
+                    "and token refresh failed."
+                ) from exc
+
+            self.config["access_token"] = refreshed_token
+
+            try:
+                _check_with_token(refreshed_token)
+            except OutbrainUnauthorizedError as refreshed_exc:
+                raise OutbrainUnauthorizedError(
+                    "Invalid Outbrain credentials: access token was rejected with 401 Unauthorized, "
+                    "and the refreshed token was also rejected."
+                ) from refreshed_exc
+
+            _persist_access_token(refreshed_token)
         except OutbrainForbiddenError as exc:
             raise OutbrainForbiddenError(
                 "Outbrain credentials are valid but do not have access to the configured account "
                 f"'{account_id}' (403 Forbidden)."
             ) from exc
+
+        return self.config["access_token"]

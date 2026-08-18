@@ -757,6 +757,7 @@ class TestMainEntrypoints(unittest.TestCase):
             discover=True,
             catalog=None,
             state=None,
+            config_path='tmp/configs/config.json',
             config={
                 'account_id': 'acct1',
                 'username': 'user',
@@ -768,6 +769,16 @@ class TestMainEntrypoints(unittest.TestCase):
 
         tap_outbrain.main_impl()
 
+        mock_client.assert_called_once_with(
+            config={
+                'account_id': 'acct1',
+                'username': 'user',
+                'password': 'pass',
+                'start_date': '2024-01-01T00:00:00Z',
+                'access_token': 'temp_token',
+            },
+            config_path='tmp/configs/config.json',
+        )
         mock_client.return_value.check_credentials.assert_called_once()
         mock_do_discover.assert_called_once()
         mock_do_sync.assert_not_called()
@@ -785,6 +796,7 @@ class TestMainEntrypoints(unittest.TestCase):
             discover=True,
             catalog=None,
             state=None,
+            config_path='tmp/configs/config.json',
             config={
                 'account_id': 'acct1',
                 'username': 'user',
@@ -801,27 +813,36 @@ class TestMainEntrypoints(unittest.TestCase):
         mock_client.assert_not_called()
 
     @patch('tap_outbrain.OutbrainClient')
+    @patch('tap_outbrain.generate_token')
     @patch('tap_outbrain.do_discover')
     @patch('tap_outbrain.do_sync')
     @patch('singer.utils.parse_args')
-    def test_main_impl_catalog_branch_uses_default_state(self, mock_parse_args, mock_do_sync, mock_do_discover, mock_client):
+    def test_main_impl_catalog_branch_uses_default_state(
+        self, mock_parse_args, mock_do_sync, mock_do_discover, mock_generate_token, mock_client
+    ):
         """main_impl uses DEFAULT_STATE when args.state is missing."""
         fake_catalog = MagicMock()
         fake_config = {'account_id': 'acct1', 'username': 'u', 'password': 'p', 'start_date': '2024-01-01T00:00:00Z'}
+        mock_generate_token.return_value = 'generated-token'
         mock_parse_args.return_value = argparse.Namespace(
             discover=False,
             catalog=fake_catalog,
             state=None,
+            config_path='tmp/configs/config.json',
             config=fake_config,
         )
 
         tap_outbrain.main_impl()
 
+        mock_client.assert_called_once_with(
+            config={**fake_config, 'access_token': 'generated-token'},
+            config_path='tmp/configs/config.json',
+        )
         mock_client.return_value.check_credentials.assert_called_once()
         mock_do_discover.assert_not_called()
         mock_do_sync.assert_called_once_with(
             fake_catalog,
-            {**fake_config, 'access_token': mock_client.call_args.kwargs['config']['access_token']},
+            {**fake_config, 'access_token': 'generated-token'},
             tap_outbrain.DEFAULT_STATE,
         )
 
@@ -843,6 +864,7 @@ class TestMainEntrypoints(unittest.TestCase):
             discover=False,
             catalog=fake_catalog,
             state=None,
+            config_path='tmp/configs/config.json',
             config=fake_config,
         )
         mock_generate_token.return_value = 'generated-token'
@@ -850,7 +872,8 @@ class TestMainEntrypoints(unittest.TestCase):
         tap_outbrain.main_impl()
 
         mock_client.assert_called_once_with(
-            config={**fake_config, 'access_token': 'generated-token'}
+            config={**fake_config, 'access_token': 'generated-token'},
+            config_path='tmp/configs/config.json',
         )
         mock_do_sync.assert_called_once_with(
             fake_catalog,

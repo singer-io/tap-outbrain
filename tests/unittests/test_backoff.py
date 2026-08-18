@@ -1,4 +1,6 @@
 import unittest
+import json
+import tempfile
 from unittest.mock import patch
 import time
 import requests
@@ -270,13 +272,14 @@ class TestOutbrainClient(unittest.TestCase):
     def test_check_credentials_success(self, mock_make_request):
         client = OutbrainClient(config={"access_token": "tok", "account_id": "acct1"})
 
-        client.check_credentials()
+        returned_token = client.check_credentials()
 
         mock_make_request.assert_called_once_with(
             "GET",
             "https://api.outbrain.com/amplify/v0.1/marketers/acct1",
             headers={"OB-TOKEN-V1": "tok"},
         )
+        self.assertEqual(returned_token, "tok")
 
     @patch.object(OutbrainClient, "make_request")
     def test_check_credentials_raises_unauthorized_error(self, mock_make_request):
@@ -289,6 +292,123 @@ class TestOutbrainClient(unittest.TestCase):
             client.check_credentials()
 
         self.assertIn("401 Unauthorized", str(cm.exception))
+
+    @patch('tap_outbrain.generate_token')
+    @patch.object(OutbrainClient, "make_request")
+    def test_check_credentials_refreshes_token_on_unauthorized(
+        self, mock_make_request, mock_generate_token
+    ):
+        mock_make_request.side_effect = [
+            OutbrainUnauthorizedError("HTTP-error-code: 401, Error: b'Invalid token'"),
+            None,
+        ]
+        mock_generate_token.return_value = "fresh-token"
+        client = OutbrainClient(
+            config={
+                "access_token": "stale-token",
+                "account_id": "acct1",
+                "username": "user",
+                "password": "pass",
+            }
+        )
+
+        returned_token = client.check_credentials()
+
+        mock_generate_token.assert_called_once_with("user", "pass")
+        self.assertEqual(client.config["access_token"], "fresh-token")
+        self.assertEqual(returned_token, "fresh-token")
+        self.assertEqual(mock_make_request.call_count, 2)
+        first_call = mock_make_request.call_args_list[0]
+        second_call = mock_make_request.call_args_list[1]
+        self.assertEqual(first_call.kwargs["headers"], {"OB-TOKEN-V1": "stale-token"})
+        self.assertEqual(second_call.kwargs["headers"], {"OB-TOKEN-V1": "fresh-token"})
+
+    @patch('tap_outbrain.generate_token')
+    @patch.object(OutbrainClient, "make_request")
+    def test_check_credentials_raises_when_token_refresh_fails(
+        self, mock_make_request, mock_generate_token
+    ):
+        mock_make_request.side_effect = OutbrainUnauthorizedError(
+            "HTTP-error-code: 401, Error: b'Invalid token'"
+        )
+        mock_generate_token.return_value = None
+        client = OutbrainClient(
+            config={
+                "access_token": "stale-token",
+                "account_id": "acct1",
+                "username": "user",
+                "password": "pass",
+            }
+        )
+
+        with self.assertRaises(OutbrainUnauthorizedError) as cm:
+            client.check_credentials()
+
+        self.assertIn("token refresh failed", str(cm.exception))
+
+    @patch('tap_outbrain.generate_token')
+    @patch.object(OutbrainClient, "make_request")
+    def test_check_credentials_raises_when_refreshed_token_is_rejected(
+        self, mock_make_request, mock_generate_token
+    ):
+        mock_make_request.side_effect = [
+            OutbrainUnauthorizedError("HTTP-error-code: 401, Error: b'Invalid token'"),
+            OutbrainUnauthorizedError("HTTP-error-code: 401, Error: b'Invalid refreshed token'"),
+        ]
+        mock_generate_token.return_value = "fresh-token"
+        client = OutbrainClient(
+            config={
+                "access_token": "stale-token",
+                "account_id": "acct1",
+                "username": "user",
+                "password": "pass",
+            }
+        )
+
+        with self.assertRaises(OutbrainUnauthorizedError) as cm:
+            client.check_credentials()
+
+        self.assertIn("refreshed token was also rejected", str(cm.exception))
+
+    @patch('tap_outbrain.generate_token')
+    @patch.object(OutbrainClient, "make_request")
+    def test_check_credentials_persists_refreshed_token_to_config(
+        self, mock_make_request, mock_generate_token
+    ):
+        mock_make_request.side_effect = [
+            OutbrainUnauthorizedError("HTTP-error-code: 401, Error: b'Invalid token'"),
+            None,
+        ]
+        mock_generate_token.return_value = "fresh-token"
+
+        with tempfile.NamedTemporaryFile("w+", suffix=".json", delete=False, encoding="utf-8") as config_file:
+            json.dump(
+                {
+                    "access_token": "stale-token",
+                    "account_id": "acct1",
+                    "username": "user",
+                    "password": "pass",
+                },
+                config_file,
+            )
+            config_path = config_file.name
+
+        client = OutbrainClient(
+            config={
+                "access_token": "stale-token",
+                "account_id": "acct1",
+                "username": "user",
+                "password": "pass",
+            },
+            config_path=config_path,
+        )
+
+        client.check_credentials()
+
+        with open(config_path, "r", encoding="utf-8") as config_file:
+            persisted_config = json.load(config_file)
+
+        self.assertEqual(persisted_config["access_token"], "fresh-token")
 
     @patch.object(OutbrainClient, "make_request")
     def test_check_credentials_raises_forbidden_error(self, mock_make_request):

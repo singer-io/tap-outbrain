@@ -365,7 +365,7 @@ def main_impl():
         raise RuntimeError
 
     config = {**config, 'access_token': access_token}
-    client = OutbrainClient(config=config)
+    client = OutbrainClient(config=config, config_path=getattr(args, 'config_path', None))
     client.check_credentials()
 
     if args.discover:
