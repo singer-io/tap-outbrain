@@ -302,7 +302,7 @@ def do_discover(client):
     LOGGER.info("Finished discover")
 
 
-def do_sync(catalog: singer.Catalog, config: Dict, state, config_path=None):
+def do_sync(catalog: singer.Catalog, config: Dict, state):
     #pylint: disable=global-statement
     global DEFAULT_START_DATE
 
@@ -310,10 +310,7 @@ def do_sync(catalog: singer.Catalog, config: Dict, state, config_path=None):
 
     DEFAULT_START_DATE = config.get('start_date')[:10]
 
-    access_token = config.get('access_token') or generate_token(
-        config.get('username'),
-        config.get('password'),
-    )
+    access_token = config.get('access_token') or generate_token(config.get('username'), config.get('password'))
     if access_token is None:
         LOGGER.fatal("Failed to generate a new access token.")
         raise RuntimeError
@@ -369,14 +366,14 @@ def main_impl():
         raise RuntimeError
 
     config = {**config, 'access_token': access_token}
-    client = OutbrainClient(config=config, config_path=getattr(args, 'config_path', None))
+    client = OutbrainClient(config=config)
     client.check_credentials()
 
     if args.discover:
         do_discover(client)
     elif args.catalog:
         state = args.state or DEFAULT_STATE
-        do_sync(args.catalog, config, state, config_path=getattr(args, 'config_path', None))
+        do_sync(args.catalog, config, state)
 
 
 def main():

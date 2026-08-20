@@ -26,10 +26,9 @@ class OutbrainForbiddenError(Exception):
 
 class OutbrainClient:
 
-    def __init__(self, config=None, config_path=None):
+    def __init__(self, config=None):
         self._retry_after = RETRY_RATE_LIMIT_MS / 1000.0  # Conversion to seconds
         self.config = config or {}
-        self.config_path = config_path
 
     def _rate_limit_backoff(self):
         """

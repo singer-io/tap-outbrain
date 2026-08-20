@@ -776,8 +776,7 @@ class TestMainEntrypoints(unittest.TestCase):
                 'password': 'pass',
                 'start_date': '2024-01-01T00:00:00Z',
                 'access_token': 'temp_token',
-            },
-            config_path='tmp/configs/config.json',
+            }
         )
         mock_client.return_value.check_credentials.assert_called_once()
         mock_do_discover.assert_called_once()
@@ -835,8 +834,7 @@ class TestMainEntrypoints(unittest.TestCase):
         tap_outbrain.main_impl()
 
         mock_client.assert_called_once_with(
-            config={**fake_config, 'access_token': 'generated-token'},
-            config_path='tmp/configs/config.json',
+            config={**fake_config, 'access_token': 'generated-token'}
         )
         mock_client.return_value.check_credentials.assert_called_once()
         mock_do_discover.assert_not_called()
@@ -844,7 +842,6 @@ class TestMainEntrypoints(unittest.TestCase):
             fake_catalog,
             {**fake_config, 'access_token': 'generated-token'},
             tap_outbrain.DEFAULT_STATE,
-            config_path='tmp/configs/config.json',
         )
 
     @patch('tap_outbrain.OutbrainClient')
@@ -873,14 +870,12 @@ class TestMainEntrypoints(unittest.TestCase):
         tap_outbrain.main_impl()
 
         mock_client.assert_called_once_with(
-            config={**fake_config, 'access_token': 'generated-token'},
-            config_path='tmp/configs/config.json',
+            config={**fake_config, 'access_token': 'generated-token'}
         )
         mock_do_sync.assert_called_once_with(
             fake_catalog,
             {**fake_config, 'access_token': 'generated-token'},
             tap_outbrain.DEFAULT_STATE,
-            config_path='tmp/configs/config.json',
         )
 
     @patch('tap_outbrain.main_impl')
