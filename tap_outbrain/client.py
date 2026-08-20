@@ -132,8 +132,6 @@ class OutbrainClient:
                 refreshed_token = tap_outbrain.generate_token(
                     username,
                     password,
-                    config=self.config,
-                    config_path=self.config_path,
                 )
             except Exception as refresh_exc:
                 raise OutbrainUnauthorizedError(

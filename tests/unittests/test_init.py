@@ -4,10 +4,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 import datetime
 import argparse
-import json
-import os
 import runpy
-import tempfile
 
 import tap_outbrain
 from tap_outbrain import (
@@ -294,50 +291,6 @@ class TestGenerateToken(unittest.TestCase):
         self.assertIsNone(token)
 
     @patch('tap_outbrain.OutbrainClient')
-    def test_persists_token_when_config_path_provided(self, mock_client_cls):
-        """generate_token persists the token when config and config_path are provided."""
-        mock_resp = MagicMock()
-        mock_resp.json.return_value = {'OB-TOKEN-V1': 'persisted-token'}
-        mock_instance = mock_client_cls.return_value
-        mock_instance.make_request.return_value = mock_resp
-
-        with tempfile.NamedTemporaryFile('w+', suffix='.json', delete=False, encoding='utf-8') as config_file:
-            json.dump({'username': 'user', 'password': 'pass'}, config_file)
-            config_path = config_file.name
-        self.addCleanup(lambda: os.path.exists(config_path) and os.unlink(config_path))
-
-        token = generate_token(
-            'user',
-            'pass',
-            config={'username': 'user', 'password': 'pass'},
-            config_path=config_path,
-        )
-
-        with open(config_path, 'r', encoding='utf-8') as config_file:
-            persisted_config = json.load(config_file)
-
-        self.assertEqual(token, 'persisted-token')
-        self.assertEqual(persisted_config['access_token'], 'persisted-token')
-
-    @patch('tap_outbrain.LOGGER.warning')
-    @patch('tap_outbrain.OutbrainClient')
-    def test_persist_token_warning_does_not_fail_generation(self, mock_client_cls, mock_warning):
-        mock_resp = MagicMock()
-        mock_resp.json.return_value = {'OB-TOKEN-V1': 'persisted-token'}
-        mock_client_cls.return_value.make_request.return_value = mock_resp
-
-        with patch('builtins.open', side_effect=OSError('disk full')):
-            token = generate_token(
-                'user',
-                'pass',
-                config={'username': 'user', 'password': 'pass'},
-                config_path='tmp/configs/config.json',
-            )
-
-        self.assertEqual(token, 'persisted-token')
-        mock_warning.assert_called_once()
-
-    @patch('tap_outbrain.OutbrainClient')
     def test_calls_correct_endpoint(self, mock_client_cls):
         """generate_token calls the /login endpoint."""
         mock_resp = MagicMock()
@@ -480,12 +433,7 @@ class TestDoSync(unittest.TestCase):
 
         do_sync(catalog, config, {'campaign_performance': {}})
 
-        mock_gen_token.assert_called_once_with(
-            'user',
-            'pass',
-            config=config,
-            config_path=None,
-        )
+        mock_gen_token.assert_called_once_with('user', 'pass')
 
     @patch('tap_outbrain.generate_token')
     @patch('tap_outbrain.sync_campaigns')

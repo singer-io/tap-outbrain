@@ -312,12 +312,7 @@ class TestOutbrainClient(unittest.TestCase):
 
         returned_token = client.check_credentials()
 
-        mock_generate_token.assert_called_once_with(
-            "user",
-            "pass",
-            config=client.config,
-            config_path=None,
-        )
+        mock_generate_token.assert_called_once_with("user", "pass")
         self.assertEqual(client.config["access_token"], "fresh-token")
         self.assertEqual(returned_token, "fresh-token")
         self.assertEqual(mock_make_request.call_count, 2)

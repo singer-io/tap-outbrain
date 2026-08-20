@@ -61,28 +61,12 @@ def request(url, access_token, params):
     return OutbrainClient().make_request('GET', url, headers=headers, params=params)
 
 
-def generate_token(username, password, config=None, config_path=None):
+def generate_token(username, password):
     LOGGER.info("Generating new token using basic auth.")
     auth = HTTPBasicAuth(username, password)
 
     resp = OutbrainClient().make_request('GET', f'{BASE_URL}/login', auth=auth)
-    access_token = resp.json().get('OB-TOKEN-V1')
-
-    if access_token and config and config_path:
-        persisted_config = dict(config)
-        persisted_config['access_token'] = access_token
-        try:
-            with open(config_path, 'w', encoding='utf-8') as config_file:
-                json.dump(persisted_config, config_file, indent=4)
-                config_file.write('\n')
-        except OSError as err:
-            LOGGER.warning(
-                "Failed to persist refreshed access token to %s: %s",
-                config_path,
-                err,
-            )
-
-    return access_token
+    return resp.json().get('OB-TOKEN-V1')
 
 
 def parse_datetime(date_time):
@@ -329,8 +313,6 @@ def do_sync(catalog: singer.Catalog, config: Dict, state, config_path=None):
     access_token = config.get('access_token') or generate_token(
         config.get('username'),
         config.get('password'),
-        config=config,
-        config_path=config_path,
     )
     if access_token is None:
         LOGGER.fatal("Failed to generate a new access token.")
@@ -381,8 +363,6 @@ def main_impl():
     access_token = config.get('access_token') or generate_token(
         config.get('username'),
         config.get('password'),
-        config=config,
-        config_path=getattr(args, 'config_path', None),
     )
     if access_token is None:
         LOGGER.fatal("Failed to generate a new access token.")
