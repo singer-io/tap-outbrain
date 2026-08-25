@@ -356,20 +356,24 @@ def main_impl():
             'password',
             'start_date'])
 
-    if args.discover:
-        config = args.config
-        access_token = config.get('access_token') or generate_token(
-            config.get('username'), config.get('password')
-        )
-        if access_token is None:
-            LOGGER.fatal("Failed to generate a new access token for discover mode.")
-            raise RuntimeError
+    config = args.config
+    access_token = config.get('access_token') or generate_token(
+        config.get('username'),
+        config.get('password'),
+    )
+    if access_token is None:
+        LOGGER.fatal("Failed to generate a new access token.")
+        raise RuntimeError
 
-        client = OutbrainClient(config={**config, 'access_token': access_token})
+    config = {**config, 'access_token': access_token}
+    client = OutbrainClient(config=config)
+    client.check_credentials()
+
+    if args.discover:
         do_discover(client)
     elif args.catalog:
         state = args.state or DEFAULT_STATE
-        do_sync(args.catalog, args.config, state)
+        do_sync(args.catalog, config, state)
 
 
 def main():

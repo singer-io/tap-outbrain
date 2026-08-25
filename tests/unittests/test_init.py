@@ -747,20 +747,38 @@ class TestSyncCampaigns(unittest.TestCase):
 
 class TestMainEntrypoints(unittest.TestCase):
 
+    @patch('tap_outbrain.OutbrainClient')
     @patch('tap_outbrain.do_discover')
     @patch('tap_outbrain.do_sync')
     @patch('singer.utils.parse_args')
-    def test_main_impl_discover_branch(self, mock_parse_args, mock_do_sync, mock_do_discover):
+    def test_main_impl_discover_branch(self, mock_parse_args, mock_do_sync, mock_do_discover, mock_client):
         """main_impl dispatches to do_discover when --discover is set."""
         mock_parse_args.return_value = argparse.Namespace(
             discover=True,
             catalog=None,
             state=None,
-            config={"access_token": "temp_token"},
+            config_path='tmp/configs/config.json',
+            config={
+                'account_id': 'acct1',
+                'username': 'user',
+                'password': 'pass',
+                'start_date': '2024-01-01T00:00:00Z',
+                'access_token': 'temp_token',
+            },
         )
 
         tap_outbrain.main_impl()
 
+        mock_client.assert_called_once_with(
+            config={
+                'account_id': 'acct1',
+                'username': 'user',
+                'password': 'pass',
+                'start_date': '2024-01-01T00:00:00Z',
+                'access_token': 'temp_token',
+            }
+        )
+        mock_client.return_value.check_credentials.assert_called_once()
         mock_do_discover.assert_called_once()
         mock_do_sync.assert_not_called()
 
@@ -777,6 +795,7 @@ class TestMainEntrypoints(unittest.TestCase):
             discover=True,
             catalog=None,
             state=None,
+            config_path='tmp/configs/config.json',
             config={
                 'account_id': 'acct1',
                 'username': 'user',
@@ -792,24 +811,72 @@ class TestMainEntrypoints(unittest.TestCase):
         mock_do_discover.assert_not_called()
         mock_client.assert_not_called()
 
+    @patch('tap_outbrain.OutbrainClient')
+    @patch('tap_outbrain.generate_token')
     @patch('tap_outbrain.do_discover')
     @patch('tap_outbrain.do_sync')
     @patch('singer.utils.parse_args')
-    def test_main_impl_catalog_branch_uses_default_state(self, mock_parse_args, mock_do_sync, mock_do_discover):
+    def test_main_impl_catalog_branch_uses_default_state(
+        self, mock_parse_args, mock_do_sync, mock_do_discover, mock_generate_token, mock_client
+    ):
         """main_impl uses DEFAULT_STATE when args.state is missing."""
         fake_catalog = MagicMock()
         fake_config = {'account_id': 'acct1', 'username': 'u', 'password': 'p', 'start_date': '2024-01-01T00:00:00Z'}
+        mock_generate_token.return_value = 'generated-token'
         mock_parse_args.return_value = argparse.Namespace(
             discover=False,
             catalog=fake_catalog,
             state=None,
+            config_path='tmp/configs/config.json',
             config=fake_config,
         )
 
         tap_outbrain.main_impl()
 
+        mock_client.assert_called_once_with(
+            config={**fake_config, 'access_token': 'generated-token'}
+        )
+        mock_client.return_value.check_credentials.assert_called_once()
         mock_do_discover.assert_not_called()
-        mock_do_sync.assert_called_once_with(fake_catalog, fake_config, tap_outbrain.DEFAULT_STATE)
+        mock_do_sync.assert_called_once_with(
+            fake_catalog,
+            {**fake_config, 'access_token': 'generated-token'},
+            tap_outbrain.DEFAULT_STATE,
+        )
+
+    @patch('tap_outbrain.OutbrainClient')
+    @patch('tap_outbrain.generate_token')
+    @patch('tap_outbrain.do_sync')
+    @patch('singer.utils.parse_args')
+    def test_main_impl_catalog_branch_reuses_generated_token(
+        self, mock_parse_args, mock_do_sync, mock_generate_token, mock_client
+    ):
+        fake_catalog = MagicMock()
+        fake_config = {
+            'account_id': 'acct1',
+            'username': 'u',
+            'password': 'p',
+            'start_date': '2024-01-01T00:00:00Z',
+        }
+        mock_parse_args.return_value = argparse.Namespace(
+            discover=False,
+            catalog=fake_catalog,
+            state=None,
+            config_path='tmp/configs/config.json',
+            config=fake_config,
+        )
+        mock_generate_token.return_value = 'generated-token'
+
+        tap_outbrain.main_impl()
+
+        mock_client.assert_called_once_with(
+            config={**fake_config, 'access_token': 'generated-token'}
+        )
+        mock_do_sync.assert_called_once_with(
+            fake_catalog,
+            {**fake_config, 'access_token': 'generated-token'},
+            tap_outbrain.DEFAULT_STATE,
+        )
 
     @patch('tap_outbrain.main_impl')
     def test_main_calls_main_impl_on_success(self, mock_main_impl):
@@ -829,14 +896,21 @@ class TestMainEntrypoints(unittest.TestCase):
         mock_critical.assert_called_once()
 
     @patch('tap_outbrain.discover.discover')
+    @patch('tap_outbrain.client.OutbrainClient.check_credentials')
     @patch('singer.utils.parse_args')
-    def test_running_module_as_script_triggers_entrypoint(self, mock_parse_args, mock_discover):
+    def test_running_module_as_script_triggers_entrypoint(self, mock_parse_args, mock_check_credentials, mock_discover):
         """Executing __init__.py as __main__ triggers the if __name__ == '__main__' block."""
         mock_parse_args.return_value = argparse.Namespace(
             discover=True,
             catalog=None,
             state=None,
-            config={"access_token": "temp_token"},
+            config={
+                'account_id': 'acct1',
+                'username': 'user',
+                'password': 'pass',
+                'start_date': '2024-01-01T00:00:00Z',
+                'access_token': 'temp_token',
+            },
         )
         mock_catalog = MagicMock()
         mock_catalog.to_dict.return_value = {'streams': []}
@@ -845,3 +919,4 @@ class TestMainEntrypoints(unittest.TestCase):
         runpy.run_path(tap_outbrain.__file__, run_name='__main__')
 
         mock_parse_args.assert_called_once()
+        mock_check_credentials.assert_called_once()
