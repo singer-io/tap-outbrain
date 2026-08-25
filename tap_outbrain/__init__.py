@@ -294,11 +294,13 @@ def sync_campaigns(state, access_token, account_id, selected_streams):
 
     LOGGER.info('Done!')
 
-def do_discover():
+
+def do_discover(client):
     LOGGER.info("Starting discovery")
-    catalog = discover()
+    catalog = discover(client)
     json.dump(catalog.to_dict(), sys.stdout, indent=2)
     LOGGER.info("Finished discover")
+
 
 def do_sync(catalog: singer.Catalog, config: Dict, state):
     #pylint: disable=global-statement
@@ -355,7 +357,16 @@ def main_impl():
             'start_date'])
 
     if args.discover:
-        do_discover()
+        config = args.config
+        access_token = config.get('access_token') or generate_token(
+            config.get('username'), config.get('password')
+        )
+        if access_token is None:
+            LOGGER.fatal("Failed to generate a new access token for discover mode.")
+            raise RuntimeError
+
+        client = OutbrainClient(config={**config, 'access_token': access_token})
+        do_discover(client)
     elif args.catalog:
         state = args.state or DEFAULT_STATE
         do_sync(args.catalog, args.config, state)

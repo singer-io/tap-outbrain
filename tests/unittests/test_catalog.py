@@ -131,11 +131,11 @@ class TestCatalogMetadata(unittest.TestCase):
 
     def test_streams_configuration(self):
         """Test that STREAMS configuration has correct parent attribute."""
-        # Verify Campaign class does not have parent attribute
-        self.assertFalse(hasattr(STREAMS['campaign'], 'parent'))
+        # Campaign is a root stream — parent is None (inherited from BaseStream)
+        self.assertIsNone(STREAMS['campaign'].parent)
 
         # Verify CampaignPerformance class has parent attribute set correctly
-        self.assertTrue(hasattr(STREAMS['campaign_performance'], 'parent'))
+        self.assertIsNotNone(STREAMS['campaign_performance'].parent)
         self.assertEqual(STREAMS['campaign_performance'].parent, 'campaign')
 
     @patch('builtins.open', new_callable=mock_open)

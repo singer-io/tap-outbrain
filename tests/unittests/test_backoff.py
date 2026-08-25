@@ -215,3 +215,77 @@ class TestOutbrainClient(unittest.TestCase):
             self.client.make_request("GET", "http://network-fail/")
 
         self.assertEqual(mock_send.call_count, 5)
+
+    @patch.object(SESSION, "send")
+    def test_403_forbidden_error(self, mock_send):
+        """
+        Simulate a 403 Forbidden response and verify that
+        OutbrainForbiddenError is raised with the correct message.
+        """
+        from tap_outbrain.client import OutbrainForbiddenError
+        forbidden_resp = DummyResponse(403, content=b"Access denied")
+        mock_send.return_value = forbidden_resp
+
+        with self.assertRaises(OutbrainForbiddenError) as cm:
+            self.client.make_request("GET", "http://forbidden/")
+
+        self.assertIn("403", str(cm.exception))
+        self.assertIn("Access denied", str(cm.exception))
+        self.assertEqual(mock_send.call_count, 1)
+
+    @patch('tap_outbrain.client.LOGGER')
+    @patch.object(time, "sleep", lambda s: None)
+    @patch.object(SESSION, "send")
+    def test_4xx_error_logs_and_raises(self, mock_send, mock_logger):
+        """
+        Simulate a 400 Bad Request response and verify that:
+        1. LOGGER.error is called with the request details
+        2. HTTPError is raised via raise_for_status()
+        """
+        bad_req_resp = DummyResponse(400, content=b"Bad request")
+        bad_req_resp.url = "http://bad-request/"
+
+        def raise_http_error():
+            err = HTTPError("400 Error")
+            err.response = bad_req_resp
+            raise err
+
+        bad_req_resp.raise_for_status = raise_http_error
+        mock_send.return_value = bad_req_resp
+
+        with self.assertRaises(HTTPError):
+            self.client.make_request("POST", "http://bad-request/", data={"key": "value"})
+
+        # Verify logger.error was called
+        mock_logger.error.assert_called_once()
+        call_args = mock_logger.error.call_args[0][0]
+        self.assertIn("400", call_args)
+        self.assertEqual(mock_send.call_count, 1)
+
+    @patch('tap_outbrain.client.LOGGER')
+    @patch.object(time, "sleep", lambda s: None)
+    @patch.object(SESSION, "send")
+    def test_5xx_error_logs_and_retries(self, mock_send, mock_logger):
+        """
+        Simulate a 503 Service Unavailable response and verify that:
+        1. LOGGER.error is called
+        2. Request is retried 5 times before giving up
+        """
+        server_error_resp = DummyResponse(503, content=b"Service unavailable")
+        server_error_resp.url = "http://server-error/"
+
+        def raise_http_error():
+            err = HTTPError("503 Error")
+            err.response = server_error_resp
+            raise err
+
+        server_error_resp.raise_for_status = raise_http_error
+        mock_send.return_value = server_error_resp
+
+        with self.assertRaises(HTTPError):
+            self.client.make_request("GET", "http://server-error/")
+
+        # Verify logger.error was called
+        self.assertGreater(mock_logger.error.call_count, 0)
+        # Verify retries occurred
+        self.assertEqual(mock_send.call_count, 5)
