@@ -110,7 +110,22 @@ class TestOutbrainClient(unittest.TestCase):
 
         self.assertEqual(self.client._retry_after, 1.5)
         self.assertEqual(mock_send.call_count, 5)
-        self.assertEqual("Rate limit exceeded", str(ob.exception))
+        self.assertIn("Rate limit exceeded", str(ob.exception))
+        self.assertIn("Retry after 1 minutes", str(ob.exception))
+
+    @patch.object(time, "sleep", lambda s: None)
+    @patch.object(SESSION, "send")
+    def test_429_exceeding_configured_cap_fails_immediately(self, mock_send):
+        """When max_retry_after_seconds is set, a larger retry-after gives up without retries."""
+        client = OutbrainClient(config={"max_retry_after_seconds": 600})
+        mock_send.return_value = DummyResponse(
+            429, headers={"rate-limit-msec-left": "2268500"}
+        )
+
+        with self.assertRaises(Server429Error):
+            client.make_request("GET", "http://rate-limit/")
+
+        self.assertEqual(mock_send.call_count, 1)
 
     @patch.object(time, "sleep", lambda s: None)
     @patch.object(SESSION, "send")

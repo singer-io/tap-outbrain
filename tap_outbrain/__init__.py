@@ -39,6 +39,7 @@ MARKETERS_CAMPAIGNS_MAX_LIMIT = 50
 # This is an arbitrary limit and can be tuned later down the road if we
 # see need for it. (Tested with 200 at least)
 REPORTS_MARKETERS_PERIODIC_MAX_LIMIT = 100
+DISCOVERY_MAX_RETRY_AFTER_SECONDS = 600
 
 
 class StreamSelectionError(Exception):
@@ -61,11 +62,11 @@ def request(url, access_token, params):
     return OutbrainClient().make_request('GET', url, headers=headers, params=params)
 
 
-def generate_token(username, password):
+def generate_token(username, password, client_config=None):
     LOGGER.info("Generating new token using basic auth.")
     auth = HTTPBasicAuth(username, password)
 
-    resp = OutbrainClient().make_request('GET', f'{BASE_URL}/login', auth=auth)
+    resp = OutbrainClient(config=client_config).make_request('GET', f'{BASE_URL}/login', auth=auth)
     return resp.json().get('OB-TOKEN-V1')
 
 
@@ -358,14 +359,25 @@ def main_impl():
 
     if args.discover:
         config = args.config
+        discovery_client_config = {
+            **config,
+            'max_retry_after_seconds': DISCOVERY_MAX_RETRY_AFTER_SECONDS,
+        }
         access_token = config.get('access_token') or generate_token(
-            config.get('username'), config.get('password')
+            config.get('username'),
+            config.get('password'),
+            client_config=discovery_client_config,
         )
         if access_token is None:
             LOGGER.fatal("Failed to generate a new access token for discover mode.")
             raise RuntimeError
 
-        client = OutbrainClient(config={**config, 'access_token': access_token})
+        client = OutbrainClient(
+            config={
+                **discovery_client_config,
+                'access_token': access_token,
+            }
+        )
         do_discover(client)
     elif args.catalog:
         state = args.state or DEFAULT_STATE

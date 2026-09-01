@@ -769,6 +769,44 @@ class TestMainEntrypoints(unittest.TestCase):
     @patch('tap_outbrain.do_discover')
     @patch('tap_outbrain.do_sync')
     @patch('singer.utils.parse_args')
+    def test_main_impl_discover_branch_caps_rate_limit_wait_for_login(
+        self, mock_parse_args, mock_do_sync, mock_do_discover, mock_gen_token, mock_client
+    ):
+        """Discover mode passes a 10-minute retry-after cap to token generation."""
+        mock_parse_args.return_value = argparse.Namespace(
+            discover=True,
+            catalog=None,
+            state=None,
+            config={
+                'account_id': 'acct1',
+                'username': 'user',
+                'password': 'pass',
+                'start_date': '2024-01-01T00:00:00Z',
+            },
+        )
+        mock_gen_token.return_value = 'generated_tok'
+
+        tap_outbrain.main_impl()
+
+        mock_gen_token.assert_called_once_with(
+            'user',
+            'pass',
+            client_config={
+                'account_id': 'acct1',
+                'username': 'user',
+                'password': 'pass',
+                'start_date': '2024-01-01T00:00:00Z',
+                'max_retry_after_seconds': 600,
+            },
+        )
+        mock_do_sync.assert_not_called()
+        mock_do_discover.assert_called_once()
+
+    @patch('tap_outbrain.OutbrainClient')
+    @patch('tap_outbrain.generate_token')
+    @patch('tap_outbrain.do_discover')
+    @patch('tap_outbrain.do_sync')
+    @patch('singer.utils.parse_args')
     def test_main_impl_discover_mode_token_generation_fails(
         self, mock_parse_args, mock_do_sync, mock_do_discover, mock_gen_token, mock_client
     ):
