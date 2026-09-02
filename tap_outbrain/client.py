@@ -7,7 +7,7 @@ import singer
 from singer.requests import giveup_on_http_4xx_except_429
 
 RETRY_RATE_LIMIT_MS = 360000
-DEFAULT_MAX_RETRY_AFTER_SECONDS = 600
+DEFAULT_MAX_RETRY_AFTER_SECONDS = 300
 
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
@@ -30,7 +30,9 @@ class OutbrainClient:
         self.config = config or {}
         configured_cap = self.config.get("max_retry_after_seconds")
         self._max_retry_after_seconds = (
-            float(configured_cap) if configured_cap is not None else None
+            float(configured_cap)
+            if configured_cap is not None
+            else DEFAULT_MAX_RETRY_AFTER_SECONDS
         )
 
     def _rate_limit_backoff(self):

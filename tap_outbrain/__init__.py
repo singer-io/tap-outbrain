@@ -39,7 +39,7 @@ MARKETERS_CAMPAIGNS_MAX_LIMIT = 50
 # This is an arbitrary limit and can be tuned later down the road if we
 # see need for it. (Tested with 200 at least)
 REPORTS_MARKETERS_PERIODIC_MAX_LIMIT = 100
-DISCOVERY_MAX_RETRY_AFTER_SECONDS = 600
+DISCOVERY_MAX_RETRY_AFTER_SECONDS = 300
 
 
 class StreamSelectionError(Exception):

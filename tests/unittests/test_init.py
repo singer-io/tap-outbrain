@@ -772,7 +772,7 @@ class TestMainEntrypoints(unittest.TestCase):
     def test_main_impl_discover_branch_caps_rate_limit_wait_for_login(
         self, mock_parse_args, mock_do_sync, mock_do_discover, mock_gen_token, mock_client
     ):
-        """Discover mode passes a 10-minute retry-after cap to token generation."""
+        """Discover mode passes a 5-minute retry-after cap to token generation."""
         mock_parse_args.return_value = argparse.Namespace(
             discover=True,
             catalog=None,
@@ -796,7 +796,7 @@ class TestMainEntrypoints(unittest.TestCase):
                 'username': 'user',
                 'password': 'pass',
                 'start_date': '2024-01-01T00:00:00Z',
-                'max_retry_after_seconds': 600,
+                'max_retry_after_seconds': 300,
             },
         )
         mock_do_sync.assert_not_called()
