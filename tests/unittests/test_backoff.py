@@ -9,6 +9,7 @@ from tap_outbrain.client import (
     Server429Error,
     SESSION,
     RETRY_RATE_LIMIT_MS,
+    DEFAULT_MAX_RETRY_AFTER_SECONDS,
 )
 
 
@@ -27,6 +28,16 @@ class TestOutbrainClient(unittest.TestCase):
 
     def setUp(self):
         self.client = OutbrainClient()
+
+    def test_max_retry_after_seconds_accepts_whitespace_string(self):
+        """max_retry_after_seconds accepts numeric strings with surrounding spaces."""
+        client = OutbrainClient(config={"max_retry_after_seconds": " 300 "})
+        self.assertEqual(client._max_retry_after_seconds, 300.0)
+
+    def test_max_retry_after_seconds_blank_string_uses_default(self):
+        """Blank max_retry_after_seconds falls back to default cap."""
+        client = OutbrainClient(config={"max_retry_after_seconds": "   "})
+        self.assertEqual(client._max_retry_after_seconds, DEFAULT_MAX_RETRY_AFTER_SECONDS)
 
     def test_dummy_response_raise_for_status(self):
         """DummyResponse.raise_for_status raises HTTPError containing the status code."""

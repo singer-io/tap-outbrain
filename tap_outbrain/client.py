@@ -28,10 +28,12 @@ class OutbrainClient:
     def __init__(self, config=None):
         self._retry_after = RETRY_RATE_LIMIT_MS / 1000.0  # Conversion to seconds
         self.config = config or {}
-        configured_cap = self.config.get("max_retry_after_seconds")
+        configured_max_retry_seconds = self.config.get("max_retry_after_seconds")
+        if isinstance(configured_max_retry_seconds, str):
+            configured_max_retry_seconds = configured_max_retry_seconds.strip()
         self._max_retry_after_seconds = (
-            float(configured_cap)
-            if configured_cap is not None
+            float(configured_max_retry_seconds)
+            if configured_max_retry_seconds not in (None, "")
             else DEFAULT_MAX_RETRY_AFTER_SECONDS
         )
 
