@@ -9,6 +9,7 @@ from tap_outbrain.client import (
     Server429Error,
     SESSION,
     RETRY_RATE_LIMIT_MS,
+    DEFAULT_MAX_RETRY_AFTER_SECONDS,
 )
 
 
@@ -27,6 +28,16 @@ class TestOutbrainClient(unittest.TestCase):
 
     def setUp(self):
         self.client = OutbrainClient()
+
+    def test_max_retry_after_seconds_accepts_whitespace_string(self):
+        """max_retry_after_seconds accepts numeric strings with surrounding spaces."""
+        client = OutbrainClient(config={"max_retry_after_seconds": " 300 "})
+        self.assertEqual(client._max_retry_after_seconds, 300.0)
+
+    def test_max_retry_after_seconds_blank_string_uses_default(self):
+        """Blank max_retry_after_seconds falls back to default cap."""
+        client = OutbrainClient(config={"max_retry_after_seconds": "   "})
+        self.assertEqual(client._max_retry_after_seconds, DEFAULT_MAX_RETRY_AFTER_SECONDS)
 
     def test_dummy_response_raise_for_status(self):
         """DummyResponse.raise_for_status raises HTTPError containing the status code."""
@@ -110,7 +121,23 @@ class TestOutbrainClient(unittest.TestCase):
 
         self.assertEqual(self.client._retry_after, 1.5)
         self.assertEqual(mock_send.call_count, 5)
-        self.assertEqual("Rate limit exceeded", str(ob.exception))
+        self.assertIn("Rate limit exceeded", str(ob.exception))
+        self.assertIn("Retry after 1 minutes", str(ob.exception))
+
+    @patch.object(time, "sleep", lambda s: None)
+    @patch.object(SESSION, "send")
+    def test_429_exceeding_default_cap_fails_immediately(self, mock_send):
+        """Without explicit config, a retry-after greater than 5 minutes gives up immediately."""
+        client = OutbrainClient()
+        mock_send.return_value = DummyResponse(
+            429, headers={"rate-limit-msec-left": "301000"}
+        )
+
+        with self.assertRaises(Server429Error) as err:
+            client.make_request("GET", "http://rate-limit/")
+
+        self.assertEqual(mock_send.call_count, 1)
+        self.assertIn("Retry after 6 minutes", str(err.exception))
 
     @patch.object(time, "sleep", lambda s: None)
     @patch.object(SESSION, "send")
@@ -144,6 +171,7 @@ class TestOutbrainClient(unittest.TestCase):
         - missing header
         Expect five total retries and fallback logic on parsing.
         """
+        client = OutbrainClient(config={"max_retry_after_seconds": 10000})
         responses = [
             DummyResponse(429, headers={"rate-limit-msec-left": "2500.0"}),
             DummyResponse(429, headers={"rate-limit-msec-left": "foo"}),
@@ -154,10 +182,10 @@ class TestOutbrainClient(unittest.TestCase):
         mock_send.side_effect = responses
 
         with self.assertRaises(Server429Error):
-            self.client.make_request("GET", "http://mixed-headers/")
+            client.make_request("GET", "http://mixed-headers/")
 
         # Final retry_after should correspond to last valid or fallback
-        self.assertEqual(self.client._retry_after, RETRY_RATE_LIMIT_MS / 1000.0)
+        self.assertEqual(client._retry_after, RETRY_RATE_LIMIT_MS / 1000.0)
         self.assertEqual(mock_send.call_count, 5)
 
     @patch.object(time, "sleep", lambda s: None)
