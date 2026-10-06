@@ -1,13 +1,20 @@
 import unittest
 from unittest.mock import patch, mock_open
 import json
+import os
 from singer import metadata
 
+from tap_outbrain import schema as schema_module
 from tap_outbrain.schema import get_schemas
 from tap_outbrain.streams import STREAMS
 
 
 class TestCatalogMetadata(unittest.TestCase):
+
+    def test_schema_get_abs_path_joins_module_dir(self):
+        """schema.get_abs_path returns path rooted at tap_outbrain module directory."""
+        result = schema_module.get_abs_path('schemas/campaign.json')
+        self.assertTrue(result.endswith(os.path.join('tap_outbrain', 'schemas', 'campaign.json')))
 
     def setUp(self):
         """Set up test fixtures with mock schema data."""
@@ -39,11 +46,11 @@ class TestCatalogMetadata(unittest.TestCase):
 
         # Mock file contents for both schemas
         def mock_file_content(filename, mode):
-            if 'campaign_performance.json' in filename:
-                return mock_open(read_data=json.dumps(self.mock_campaign_performance_schema))()
-            elif 'campaign.json' in filename:
-                return mock_open(read_data=json.dumps(self.mock_campaign_schema))()
-            return mock_open()()
+            data = json.dumps(
+                self.mock_campaign_performance_schema if 'campaign_performance.json' in filename
+                else self.mock_campaign_schema
+            )
+            return mock_open(read_data=data)()
 
         mock_file.side_effect = mock_file_content
 
@@ -65,11 +72,11 @@ class TestCatalogMetadata(unittest.TestCase):
 
         # Mock file contents for both schemas
         def mock_file_content(filename, mode):
-            if 'campaign_performance.json' in filename:
-                return mock_open(read_data=json.dumps(self.mock_campaign_performance_schema))()
-            elif 'campaign.json' in filename:
-                return mock_open(read_data=json.dumps(self.mock_campaign_schema))()
-            return mock_open()()
+            data = json.dumps(
+                self.mock_campaign_performance_schema if 'campaign_performance.json' in filename
+                else self.mock_campaign_schema
+            )
+            return mock_open(read_data=data)()
 
         mock_file.side_effect = mock_file_content
 
@@ -90,11 +97,11 @@ class TestCatalogMetadata(unittest.TestCase):
 
         # Mock file contents for both schemas
         def mock_file_content(filename, mode):
-            if 'campaign_performance.json' in filename:
-                return mock_open(read_data=json.dumps(self.mock_campaign_performance_schema))()
-            elif 'campaign.json' in filename:
-                return mock_open(read_data=json.dumps(self.mock_campaign_schema))()
-            return mock_open()()
+            data = json.dumps(
+                self.mock_campaign_performance_schema if 'campaign_performance.json' in filename
+                else self.mock_campaign_schema
+            )
+            return mock_open(read_data=data)()
 
         mock_file.side_effect = mock_file_content
 
@@ -124,11 +131,11 @@ class TestCatalogMetadata(unittest.TestCase):
 
     def test_streams_configuration(self):
         """Test that STREAMS configuration has correct parent attribute."""
-        # Verify Campaign class does not have parent attribute
-        self.assertFalse(hasattr(STREAMS['campaign'], 'parent'))
+        # Campaign is a root stream — parent is None (inherited from BaseStream)
+        self.assertIsNone(STREAMS['campaign'].parent)
 
         # Verify CampaignPerformance class has parent attribute set correctly
-        self.assertTrue(hasattr(STREAMS['campaign_performance'], 'parent'))
+        self.assertIsNotNone(STREAMS['campaign_performance'].parent)
         self.assertEqual(STREAMS['campaign_performance'].parent, 'campaign')
 
     @patch('builtins.open', new_callable=mock_open)
@@ -140,11 +147,11 @@ class TestCatalogMetadata(unittest.TestCase):
 
         # Mock file contents for both schemas
         def mock_file_content(filename, mode):
-            if 'campaign_performance.json' in filename:
-                return mock_open(read_data=json.dumps(self.mock_campaign_performance_schema))()
-            elif 'campaign.json' in filename:
-                return mock_open(read_data=json.dumps(self.mock_campaign_schema))()
-            return mock_open()()
+            data = json.dumps(
+                self.mock_campaign_performance_schema if 'campaign_performance.json' in filename
+                else self.mock_campaign_schema
+            )
+            return mock_open(read_data=data)()
 
         mock_file.side_effect = mock_file_content
 
@@ -181,11 +188,11 @@ class TestCatalogMetadata(unittest.TestCase):
 
         # Mock file contents for both schemas
         def mock_file_content(filename, mode):
-            if 'campaign_performance.json' in filename:
-                return mock_open(read_data=json.dumps(self.mock_campaign_performance_schema))()
-            elif 'campaign.json' in filename:
-                return mock_open(read_data=json.dumps(self.mock_campaign_schema))()
-            return mock_open()()
+            data = json.dumps(
+                self.mock_campaign_performance_schema if 'campaign_performance.json' in filename
+                else self.mock_campaign_schema
+            )
+            return mock_open(read_data=data)()
 
         mock_file.side_effect = mock_file_content
 

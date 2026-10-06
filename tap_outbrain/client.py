@@ -9,15 +9,22 @@ RETRY_RATE_LIMIT_MS = 360000
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
 
+OUTBRAIN_API_BASE = 'https://api.outbrain.com/amplify/v0.1'
+
 
 class Server429Error(Exception):
     pass
 
 
+class OutbrainForbiddenError(Exception):
+    pass
+
+
 class OutbrainClient:
 
-    def __init__(self):
+    def __init__(self, config=None):
         self._retry_after = RETRY_RATE_LIMIT_MS / 1000.0  # Conversion to seconds
+        self.config = config or {}
 
     def _rate_limit_backoff(self):
         """
@@ -71,6 +78,10 @@ class OutbrainClient:
                     self._retry_after = RETRY_RATE_LIMIT_MS
                 self._retry_after /= 1000.0  # For miliseconds conversion to seconds
                 raise Server429Error("Rate limit exceeded")
+            elif resp.status_code == 403:
+                raise OutbrainForbiddenError(
+                    f"HTTP-error-code: 403, Error: {resp.content!r}"
+                )
             elif resp.status_code >= 400:
                 LOGGER.error(
                     f"{method} {req.url} [{resp.status_code} – {resp.content!r}]"
