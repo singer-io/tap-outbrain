@@ -529,6 +529,19 @@ class TestRequestHelper(unittest.TestCase):
         _, kwargs = mock_instance.make_request.call_args
         self.assertNotIn('User-Agent', kwargs['headers'])
 
+    @patch('tap_outbrain.OutbrainClient')
+    def test_request_constructs_client_without_rate_limit_giveup_config(self, mock_client_cls):
+        """Regression test: request() (used throughout sync) must construct a
+        plain OutbrainClient() with no config, so enable_rate_limit_giveup is
+        never enabled for sync. Discovery mode is the only caller allowed to
+        pass enable_rate_limit_giveup=True (see tap_outbrain.main_impl)."""
+        mock_instance = mock_client_cls.return_value
+        mock_instance.make_request.return_value = MagicMock()
+
+        tap_outbrain.request('http://api/', 'tok', {})
+
+        mock_client_cls.assert_called_once_with()
+
 
 # ---------------------------------------------------------------------------
 # sync_performance
@@ -797,10 +810,41 @@ class TestMainEntrypoints(unittest.TestCase):
                 'password': 'pass',
                 'start_date': '2024-01-01T00:00:00Z',
                 'max_retry_after_seconds': 300,
+                'enable_rate_limit_giveup': True,
             },
         )
         mock_do_sync.assert_not_called()
         mock_do_discover.assert_called_once()
+
+    @patch('tap_outbrain.OutbrainClient')
+    @patch('tap_outbrain.generate_token')
+    @patch('tap_outbrain.do_discover')
+    @patch('tap_outbrain.do_sync')
+    @patch('singer.utils.parse_args')
+    def test_main_impl_discover_branch_enables_rate_limit_giveup_on_client(
+        self, mock_parse_args, mock_do_sync, mock_do_discover, mock_gen_token, mock_client
+    ):
+        """Discover mode constructs the OutbrainClient with enable_rate_limit_giveup=True
+        so 429s past the cap fail discovery fast; sync must never receive this flag
+        (see TestRequestHelper.test_request_constructs_client_without_rate_limit_giveup_config)."""
+        mock_parse_args.return_value = argparse.Namespace(
+            discover=True,
+            catalog=None,
+            state=None,
+            config={
+                'account_id': 'acct1',
+                'username': 'user',
+                'password': 'pass',
+                'start_date': '2024-01-01T00:00:00Z',
+            },
+        )
+        mock_gen_token.return_value = 'generated_tok'
+
+        tap_outbrain.main_impl()
+
+        _, client_kwargs = mock_client.call_args
+        self.assertTrue(client_kwargs['config']['enable_rate_limit_giveup'])
+        self.assertEqual(client_kwargs['config']['max_retry_after_seconds'], 300)
 
     @patch('tap_outbrain.OutbrainClient')
     @patch('tap_outbrain.generate_token')

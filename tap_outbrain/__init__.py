@@ -362,6 +362,7 @@ def main_impl():
         discovery_client_config = {
             **config,
             'max_retry_after_seconds': DISCOVERY_MAX_RETRY_AFTER_SECONDS,
+            'enable_rate_limit_giveup': True,
         }
         access_token = config.get('access_token') or generate_token(
             config.get('username'),
