@@ -9,6 +9,7 @@ from tap_outbrain.client import (
     Server429Error,
     SESSION,
     RETRY_RATE_LIMIT_MS,
+    DEFAULT_MAX_RETRY_AFTER_SECONDS,
 )
 
 
@@ -27,6 +28,16 @@ class TestOutbrainClient(unittest.TestCase):
 
     def setUp(self):
         self.client = OutbrainClient()
+
+    def test_max_retry_after_seconds_accepts_whitespace_string(self):
+        """max_retry_after_seconds accepts numeric strings with surrounding spaces."""
+        client = OutbrainClient(config={"max_retry_after_seconds": " 300 "})
+        self.assertEqual(client._max_retry_after_seconds, 300.0)
+
+    def test_max_retry_after_seconds_blank_string_uses_default(self):
+        """Blank max_retry_after_seconds falls back to default cap."""
+        client = OutbrainClient(config={"max_retry_after_seconds": "   "})
+        self.assertEqual(client._max_retry_after_seconds, DEFAULT_MAX_RETRY_AFTER_SECONDS)
 
     def test_dummy_response_raise_for_status(self):
         """DummyResponse.raise_for_status raises HTTPError containing the status code."""
@@ -110,7 +121,85 @@ class TestOutbrainClient(unittest.TestCase):
 
         self.assertEqual(self.client._retry_after, 1.5)
         self.assertEqual(mock_send.call_count, 5)
-        self.assertEqual("Rate limit exceeded", str(ob.exception))
+        self.assertIn("Rate limit exceeded", str(ob.exception))
+        self.assertIn("Retry after 1 minutes", str(ob.exception))
+
+    @patch.object(time, "sleep", lambda s: None)
+    @patch.object(SESSION, "send")
+    def test_429_sync_default_client_never_gives_up_early(self, mock_send):
+        """Sync uses a plain OutbrainClient() with no config, so
+        enable_rate_limit_giveup defaults to False. Even when the rate-limit
+        wait would exceed any notional cap, the client must retry up to
+        max_tries instead of giving up immediately -- give-up is reserved for
+        discovery mode only."""
+        client = OutbrainClient()
+        mock_send.return_value = DummyResponse(
+            429, headers={"rate-limit-msec-left": "301000"}
+        )
+
+        with self.assertRaises(Server429Error) as err:
+            client.make_request("GET", "http://rate-limit/")
+
+        self.assertEqual(mock_send.call_count, 5)
+        self.assertIn("Retry after 6 minutes", str(err.exception))
+
+    @patch.object(time, "sleep", lambda s: None)
+    @patch.object(SESSION, "send")
+    def test_429_max_retry_after_seconds_alone_does_not_enable_giveup(self, mock_send):
+        """Setting max_retry_after_seconds without enable_rate_limit_giveup must
+        NOT enable early give-up. The flag, not just the threshold, gates the
+        behavior so that passing a config dict for other reasons (e.g. sync
+        configs that happen to carry this key) can never accidentally trigger
+        discovery-only give-up semantics."""
+        client = OutbrainClient(config={"max_retry_after_seconds": 1})
+        mock_send.return_value = DummyResponse(
+            429, headers={"rate-limit-msec-left": "301000"}
+        )
+
+        with self.assertRaises(Server429Error):
+            client.make_request("GET", "http://rate-limit/")
+
+        self.assertEqual(mock_send.call_count, 5)
+
+    @patch.object(time, "sleep", lambda s: None)
+    @patch.object(SESSION, "send")
+    def test_429_discovery_config_gives_up_immediately_when_exceeding_cap(self, mock_send):
+        """Discovery mode explicitly sets enable_rate_limit_giveup=True alongside
+        max_retry_after_seconds (see tap_outbrain.main_impl's
+        discovery_client_config). When the rate-limit wait exceeds the cap,
+        the client must give up after a single attempt."""
+        client = OutbrainClient(config={
+            "max_retry_after_seconds": 300,
+            "enable_rate_limit_giveup": True,
+        })
+        mock_send.return_value = DummyResponse(
+            429, headers={"rate-limit-msec-left": "301000"}
+        )
+
+        with self.assertRaises(Server429Error) as err:
+            client.make_request("GET", "http://rate-limit/")
+
+        self.assertEqual(mock_send.call_count, 1)
+        self.assertIn("Retry after 6 minutes", str(err.exception))
+
+    @patch.object(time, "sleep", lambda s: None)
+    @patch.object(SESSION, "send")
+    def test_429_discovery_config_retries_within_cap(self, mock_send):
+        """Discovery mode's give-up must only trigger once the wait exceeds the
+        cap; requests within the cap still retry normally."""
+        responses = [
+            DummyResponse(429, headers={"rate-limit-msec-left": "2000"}),
+            DummyResponse(200, headers={}),
+        ]
+        client = OutbrainClient(config={
+            "max_retry_after_seconds": 300,
+            "enable_rate_limit_giveup": True,
+        })
+        mock_send.side_effect = responses
+
+        client.make_request("GET", "http://rate-limit/")
+
+        self.assertEqual(mock_send.call_count, 2)
 
     @patch.object(time, "sleep", lambda s: None)
     @patch.object(SESSION, "send")
@@ -144,6 +233,7 @@ class TestOutbrainClient(unittest.TestCase):
         - missing header
         Expect five total retries and fallback logic on parsing.
         """
+        client = OutbrainClient(config={"max_retry_after_seconds": 10000})
         responses = [
             DummyResponse(429, headers={"rate-limit-msec-left": "2500.0"}),
             DummyResponse(429, headers={"rate-limit-msec-left": "foo"}),
@@ -154,10 +244,10 @@ class TestOutbrainClient(unittest.TestCase):
         mock_send.side_effect = responses
 
         with self.assertRaises(Server429Error):
-            self.client.make_request("GET", "http://mixed-headers/")
+            client.make_request("GET", "http://mixed-headers/")
 
         # Final retry_after should correspond to last valid or fallback
-        self.assertEqual(self.client._retry_after, RETRY_RATE_LIMIT_MS / 1000.0)
+        self.assertEqual(client._retry_after, RETRY_RATE_LIMIT_MS / 1000.0)
         self.assertEqual(mock_send.call_count, 5)
 
     @patch.object(time, "sleep", lambda s: None)

@@ -1,3 +1,5 @@
+import math
+
 import backoff
 import requests
 import singer
@@ -5,6 +7,7 @@ import singer
 from singer.requests import giveup_on_http_4xx_except_429
 
 RETRY_RATE_LIMIT_MS = 360000
+DEFAULT_MAX_RETRY_AFTER_SECONDS = None
 
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
@@ -25,6 +28,22 @@ class OutbrainClient:
     def __init__(self, config=None):
         self._retry_after = RETRY_RATE_LIMIT_MS / 1000.0  # Conversion to seconds
         self.config = config or {}
+        self._enable_rate_limit_giveup = bool(
+            self.config.get("enable_rate_limit_giveup", False)
+        )
+        configured_max_retry_seconds = self.config.get("max_retry_after_seconds")
+
+        if isinstance(configured_max_retry_seconds, str):
+            configured_max_retry_seconds = configured_max_retry_seconds.strip()
+
+            if configured_max_retry_seconds.lower() in {"none", "null", ""}:
+                configured_max_retry_seconds = None
+
+        self._max_retry_after_seconds = (
+            float(configured_max_retry_seconds)
+            if configured_max_retry_seconds not in (None, "")
+            else DEFAULT_MAX_RETRY_AFTER_SECONDS
+        )
 
     def _rate_limit_backoff(self):
         """
@@ -37,11 +56,19 @@ class OutbrainClient:
     def make_request(
         self, method, url, headers=None, params=None, auth=None, json=None, data=None
     ):
+        def _giveup_on_429(_exception):
+            return (
+                self._enable_rate_limit_giveup
+                and self._max_retry_after_seconds is not None
+                and self._retry_after > self._max_retry_after_seconds
+            )
+
         @backoff.on_exception(
             self._rate_limit_backoff,
             Server429Error,
             max_tries=5,
             jitter=None,
+            giveup=_giveup_on_429,
         )
         @backoff.on_exception(
             backoff.constant,
@@ -71,13 +98,27 @@ class OutbrainClient:
             if resp.status_code == 429:
                 try:
                     # Reference: https://amplifyv01.docs.apiary.io/#reference/rate-limits
-                    self._retry_after = int(
-                        float(resp.headers.get("rate-limit-msec-left", RETRY_RATE_LIMIT_MS))
+                    retry_after_ms = float(
+                        resp.headers.get("rate-limit-msec-left", RETRY_RATE_LIMIT_MS)
                     )
+                    self._retry_after = retry_after_ms / 1000.0
                 except (TypeError, ValueError):
-                    self._retry_after = RETRY_RATE_LIMIT_MS
-                self._retry_after /= 1000.0  # For miliseconds conversion to seconds
-                raise Server429Error("Rate limit exceeded")
+                    self._retry_after = RETRY_RATE_LIMIT_MS / 1000.0
+
+                if (
+                    self._enable_rate_limit_giveup
+                    and self._max_retry_after_seconds is not None
+                    and self._retry_after > self._max_retry_after_seconds
+                ):
+                    LOGGER.error(
+                        "Rate limit backoff %.1fs exceeds configured maximum %.1fs; failing request.",
+                        self._retry_after,
+                        self._max_retry_after_seconds,
+                    )
+                retry_after_minutes = max(1, math.ceil(self._retry_after / 60.0))
+                raise Server429Error(
+                    f"Rate limit exceeded. Retry after {retry_after_minutes} minutes."
+                )
             elif resp.status_code == 403:
                 raise OutbrainForbiddenError(
                     f"HTTP-error-code: 403, Error: {resp.content!r}"
